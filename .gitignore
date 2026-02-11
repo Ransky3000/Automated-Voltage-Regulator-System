@@ -1,0 +1,20 @@
+# Arduino
+*.elf
+*.hex
+*.bin
+*.lock
+*.v2
+build/
+nbproject/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/
+*.swp
+
+# Proteus & Simulation
+Project Backups/
+*.workspace
