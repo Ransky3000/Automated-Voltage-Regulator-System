@@ -1,32 +1,47 @@
+/**
+ * This program shows you how to use the basics of this library.
+*/
+
 #include <ZMPT101B-driver.h>
 
-ZMPT101B sensor(A0);
+#define SENSITIVITY 500.0f
 
-unsigned long lastPrint = 0;
+// ZMPT101B sensor output connected to analog pin A0
+// and the voltage source frequency is 50 Hz.
+ZMPT101B voltageSensor(A0, 60.0);
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println("Calibrating Zero Point...");
-  int zero = sensor.calibrateZeroPoint();
-  Serial.print("Zero Point: ");
-  Serial.println(zero);
-  
-  // calibrate this against a multimeter
-  sensor.setSensitivity(1.0); 
+  Serial.begin(115200);
+  // Change the sensitivity value based on value you got from the calibrate
+  // example.
+  voltageSensor.setSensitivity(SENSITIVITY);
 }
 
 void loop() {
-  // MUST call this frequently for non-blocking sampling
-  sensor.update();
-
-  // Print results every 500ms without blocking
-  if (millis() - lastPrint > 500) {
-    float voltage = sensor.getVoltageAC();
-    
-    // For Serial Plotter:
-    Serial.print("Voltage:");
+  
+  // ----------------------------------------------------
+  // OPTION 1: Non-Blocking (Recommended)
+  // Keeps the loop running fast.
+  // ----------------------------------------------------
+  voltageSensor.update(); // Call this frequently!
+  
+  static unsigned long lastPrint = 0;
+  if (millis() - lastPrint > 300) {
+    float voltage = voltageSensor.getVoltage();
+    Serial.print("Non-Blocking: ");
     Serial.println(voltage);
-    
     lastPrint = millis();
   }
+
+  // ----------------------------------------------------
+  // OPTION 2: Blocking (Simple)
+  // Pauses code for ~20ms to measure.
+  // Uncomment below to use:
+  // ----------------------------------------------------
+  /*
+  float voltage = voltageSensor.getRmsVoltage();
+  Serial.print("Blocking: ");
+  Serial.println(voltage);
+  delay(300);
+  */
 }
