@@ -18,30 +18,10 @@ void setup() {
 }
 
 void loop() {
-  
-  // ----------------------------------------------------
-  // OPTION 1: Non-Blocking (Recommended)
-  // Keeps the loop running fast.
-  // ----------------------------------------------------
-  voltageSensor.update(); // Call this frequently!
-  
-  static unsigned long lastPrint = 0;
-  if (millis() - lastPrint > 300) {
-    float voltage = voltageSensor.getVoltage();
-    Serial.print("Non-Blocking: ");
-    Serial.println(voltage);
-    lastPrint = millis();
-  }
-
-  // ----------------------------------------------------
-  // OPTION 2: Blocking (Simple)
-  // Pauses code for ~20ms to measure.
-  // Uncomment below to use:
-  // ----------------------------------------------------
-  /*
+  // Blocking Mode (Standard)
+  // This function will pause execution for ~1 cycle (16.7ms at 60Hz) to read the RMS voltage.
   float voltage = voltageSensor.getRmsVoltage();
-  Serial.print("Blocking: ");
+  
   Serial.println(voltage);
   delay(300);
-  */
 }
