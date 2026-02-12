@@ -1,40 +1,30 @@
 # Automated Voltage Regulator System
 
-This is an Arduino Library for the Automated Voltage Regulator System project.
+This is the main application firmware for the Automated Voltage Regulator System.
+
+## Dependencies
+
+This project requires the following libraries:
+- **ZMPT101B_DRIVER**: Custom library for AC Voltage sensing.
+  - Make sure this library is installed in your Arduino `libraries` folder.
 
 ## Directory Structure
 
-- `src/`: Shared library source code (.h and .cpp files).
-- `tests/`: Independent sketches that use the library.
-    - `__main__/`: The primary application sketch.
-    - `ZMPT101B_test/`: Test sketch for the ZMPT101B sensor.
-- `docs/`: Project documentation and simulation files.
+- `src/`: Core Application Logic.
+    - `Machine.h` / `Machine.cpp`: State Machine implementation.
+- `tests/`: Project sketches.
+    - `__main__/`: The primary application.
+    - `ZMPT101B_test/`: Integration test using the external driver library.
+- `docs/`: Documentation and simulation files.
 
-## ZMPT101B Driver Usage
+## Usage
 
-The library includes a hybrid ZMPT101B AC Voltage Sensor driver.
-
-### 1. Blocking Mode (Simpler)
-Use `getRmsVoltage()` to get a reading. Note that this pauses execution for ~17ms.
-```cpp
-ZMPT101B voltageSensor(A0, 60.0);
-float voltage = voltageSensor.getRmsVoltage();
-```
-
-### 2. Non-Blocking Mode (High Performance)
-Use `update()` in `loop()` to sample in the background (4kHz rate).
-```cpp
-ZMPT101B voltageSensor(A0, 60.0);
-
-void loop() {
-    voltageSensor.update(); // Call frequently!
-    
-    // Read anytime without delay
-    float voltage = voltageSensor.getVoltage();
-}
-```
+1. Open `tests/__main__/__main__.ino` in Arduino IDE.
+2. Select your board and port.
+3. Upload to the device.
 
 ## Development
 
-- Add reusable logic to `src/`.
-- Create new test sketches in `tests/` to verify components.
+- Implement core system logic in `src/Machine.cpp`.
+- Use `tests` to verify subsystems.
+
