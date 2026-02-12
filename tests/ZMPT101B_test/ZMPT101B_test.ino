@@ -15,6 +15,7 @@ void setup() {
   // Change the sensitivity value based on value you got from the calibrate
   // example.
   voltageSensor.setSensitivity(SENSITIVITY);
+  Serial.println("Blocking ZMPT101B Test Started");
 }
 
 void loop() {

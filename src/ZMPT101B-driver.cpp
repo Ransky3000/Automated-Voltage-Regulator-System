@@ -24,17 +24,18 @@ void ZMPT101B::update()
 {
     unsigned long now = micros();
     
-    // Sample every 1ms (1000us) -> 1kHz sampling rate
-    // This is sufficient for 50/60Hz and leaves time for other tasks
-    if (now - lastSampleTime >= 1000) {
+    // Sample every 0.25ms (250us) -> 4kHz sampling rate
+    // Improved resolution: ~66 samples per 60Hz cycle (vs 16 previously).
+    // This reduces fluctuations significantly but uses more CPU time.
+    if (now - lastSampleTime >= 250) {
         lastSampleTime = now;
         
         int raw = analogRead(pin);
         
         // Continuous DC Removal (Low Pass Filter)
         // Keeps the Zero Point accurate even if it drifts.
-        // alpha = 0.005 -> Very slow, stable adaptation
-        zeroPoint = (0.995f * zeroPoint) + (0.005f * raw);
+        // alpha = 0.001 -> Slower, very stable adaptation (TC ~250ms at 4kHz)
+        zeroPoint = (0.999f * zeroPoint) + (0.001f * raw);
         
         float centered = raw - zeroPoint;
         
