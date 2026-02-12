@@ -1,4 +1,4 @@
-#include <ZMPT101B-driver.h>
+#include <ZMPT101B_DRIVER.h>
 
 // Sensor on Pin A0, Frequency 60Hz
 ZMPT101B voltageSensor(A0, 60.0);
