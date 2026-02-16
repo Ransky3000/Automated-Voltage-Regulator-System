@@ -1,7 +1,7 @@
 #include <ZMPT101B_DRIVER.h>
 
-// Sensor on Pin A0, Frequency 60Hz
-ZMPT101B voltageSensor(A0, 60.0);
+// Sensor on Pin Ax, Frequency 60Hz
+ZMPT101B voltageSensor(A2, 50.0);
 
 void setup() {
   Serial.begin(115200);
