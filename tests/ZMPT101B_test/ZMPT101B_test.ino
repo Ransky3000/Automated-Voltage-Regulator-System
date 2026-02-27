@@ -2,7 +2,7 @@
  * This program shows you how to use the basics of this library.
 */
 
-#include <ZMPT101B-driver.h>
+#include <ZMPT101B_DRIVER.h>
 
 #define SENSITIVITY 500.0f
 

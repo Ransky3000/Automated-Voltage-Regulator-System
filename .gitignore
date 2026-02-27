@@ -15,6 +15,12 @@ Thumbs.db
 .vscode/
 *.swp
 
-# Proteus & Simulation
-Project Backups/
+# Proteus & Simulation (All Excluded)
+*.pdsprj
+*.pdsprj.*
 *.workspace
+*.PWI
+*.log
+Project Backups/
+Last Loaded *.pdsprj
+
