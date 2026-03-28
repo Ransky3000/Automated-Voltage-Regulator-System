@@ -26,13 +26,14 @@
 #define CAL_STEP_V      5
 #define CAL_POINTS      51    // (250 / 5) + 1
 #define EEPROM_MAGIC    0xCA
+#define EEPROM_TOLERANCE_ADDR  104  // After calibration table (2 + 51×2 = 104)
 
 // ─── Servo Pulse Timing ──────────────────────────────
 #define PULSE_DURATION_MS   80
 #define SETTLE_DURATION_MS  150
 
 // ─── Regulation ──────────────────────────────────────
-#define DEADBAND_V      2
+#define DEFAULT_TOLERANCE_V  2     // Default ±2V if user hasn't set one
 #define STALL_TIMEOUT   3000  // ms without Vout change = stalled
 
 // ─── ACS712 20A ──────────────────────────────────────
@@ -46,11 +47,13 @@
 
 // ─── UI State (what the LCD shows) ───────────────────
 enum UIState {
-  HOME,           // [A] Set Voltage  / [B] View Status
-  INPUT_TARGET,   // Set target output / ___V
-  VIEW_STATUS,    // [A] Input  / [B] Output
-  VIEW_INPUT,     // Voltage: <Vin>V
-  VIEW_OUTPUT     // V:<Vout>  I:<A> / P:<W>
+  HOME,             // [A] Configure    / [B] View Status
+  CONFIGURE,        // [A] Set Voltage  / [B] Set Tolerance
+  INPUT_TARGET,     // Set target output / ___V
+  INPUT_TOLERANCE,  // Set tolerance    / __V
+  VIEW_STATUS,      // [A] Input  / [B] Output
+  VIEW_INPUT,       // Voltage: <Vin>V
+  VIEW_OUTPUT       // V:<Vout>  I:<A> / P:<W>
 };
 
 // ─── Regulator State (what the servo is doing) ───────
@@ -91,6 +94,7 @@ class Machine {
 
     // ── Regulation ──
     int targetVoltage;          // -1 = no target
+    int toleranceV;             // User-configurable ± tolerance (default 2V)
     float currentVin;
     float currentVout;
     float currentAmps;
@@ -103,6 +107,7 @@ class Machine {
     // ── UI ──
     String inputBuffer;
     byte isLineFull;
+    bool backlightOn;
 
     // ── Buzzer ──
     unsigned long buzzerOnMillis;
@@ -118,6 +123,7 @@ class Machine {
     
     // Input processing
     void processTargetInput(char key);
+    void processToleranceInput(char key);
 
     // Servo helpers
     void servoStart(int speed);

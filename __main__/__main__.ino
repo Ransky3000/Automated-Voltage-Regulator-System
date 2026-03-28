@@ -30,7 +30,7 @@ Machine machine(keypad, lcd);
 
 void setup() {
   Serial.begin(9600);
-  Serial.println(F("--- AVR System Boot ---"));
+  Serial.println("--- AVR System Boot ---");
   machine.Initialize();
 }
 

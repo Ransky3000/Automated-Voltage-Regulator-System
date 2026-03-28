@@ -18,6 +18,7 @@ Machine::Machine(Keypad& kRef, LiquidCrystal_I2C& lcdRef)
   hasCalibration = false;
 
   targetVoltage = -1;
+  toleranceV = DEFAULT_TOLERANCE_V;
   currentVin = 0;
   currentVout = 0;
   currentAmps = 0;
@@ -28,6 +29,7 @@ Machine::Machine(Keypad& kRef, LiquidCrystal_I2C& lcdRef)
 
   inputBuffer = "";
   isLineFull = 0;
+  backlightOn = true;
 
   buzzerOnMillis = 0;
   buzzerActive = false;
@@ -57,11 +59,22 @@ void Machine::Initialize() {
   // Load EEPROM calibration for servo
   loadCalibration();
 
+  // Load saved tolerance from EEPROM
+  byte savedTol = EEPROM.read(EEPROM_TOLERANCE_ADDR);
+  if (savedTol >= 1 && savedTol <= 99) {
+    toleranceV = savedTol;
+    Serial.print(F("Loaded tolerance: "));
+    Serial.println(toleranceV);
+  } else {
+    toleranceV = DEFAULT_TOLERANCE_V;
+    Serial.println(F("No saved tolerance. Default: 2V"));
+  }
+
   delay(2000);
 
   // Show Home Screen
   uiState = HOME;
-  displayLCD(true, 0, 0, "[A] Set Voltage");
+  displayLCD(true, 0, 0, "[A] Configure");
   displayLCD(false, 0, 1, "[B] View Status");
 }
 
@@ -147,7 +160,7 @@ int Machine::potToVoltage(int potVal) {
       return map(potVal, calPotValues[i], calPotValues[i + 1], v1, v2);
     }
   }
-  return VARIAC_MAX_V;
+  return VARIAC_MAX_V; // Fallback
 }
 
 // ═══════════════════════════════════════════════════════
@@ -177,7 +190,7 @@ void Machine::regulateLoop() {
   switch (servoState) {
 
     case SERVO_IDLE:
-      if (absError > DEADBAND_V) {
+      if (absError > toleranceV) {
         // Drift detected — need to move
         servoState = SERVO_SETTLING;
         servoTimer = millis();
@@ -191,7 +204,7 @@ void Machine::regulateLoop() {
         error = targetVoltage - (int)currentVout;
         absError = abs(error);
 
-        if (absError <= DEADBAND_V) {
+        if (absError <= toleranceV) {
           // At target!
           servoStop();
           servoState = SERVO_IDLE;
@@ -297,7 +310,7 @@ void Machine::checkAlarmRecovery() {
     }
   } else if (regState == REG_OVER_VOLTAGE) {
     // Over voltage recovery: if currentVout dropped back into range
-    if (currentVout <= targetVoltage + DEADBAND_V) {
+    if (currentVout <= targetVoltage + toleranceV) {
       regState = REG_ACTIVE;
       lastVoutChangeTime = millis();
       Serial.println(F("RECOVERED from OVER_VOLTAGE"));
@@ -317,13 +330,14 @@ void Machine::processTargetInput(char key) {
     inputBuffer.remove(inputBuffer.length() - 1);
   } else if (key == 'A' && inputBuffer.length() > 0) {
     // Confirm
+    lcd.noBlink();
     int val = inputBuffer.toInt();
     if (val >= 0 && val <= 250) {
       targetVoltage = val;
       regState = REG_ACTIVE;
       servoState = SERVO_SETTLING;
       servoTimer = millis();
-      lastVoutChangeTime = millis(); // Reset stall detection
+      lastVoutChangeTime = millis();
 
       inputBuffer = "";
       uiState = VIEW_STATUS;
@@ -331,31 +345,78 @@ void Machine::processTargetInput(char key) {
       displayLCD(false, 0, 1, "[B] Output");
       return;
     } else {
-      // Invalid range
       displayLCD(true, 0, 0, "Invalid! 0-250");
       delay(1000);
       inputBuffer = "";
     }
   } else if (key == 'D') {
     // Cancel
+    lcd.noBlink();
     inputBuffer = "";
-    uiState = HOME;
+    uiState = CONFIGURE;
     displayLCD(true, 0, 0, "[A] Set Voltage");
-    displayLCD(false, 0, 1, "[B] View Status");
+    displayLCD(false, 0, 1, "[B] Tolerance");
     return;
   }
 
-  // Redraw input screen
+  // Redraw: show typed digits, pad with spaces, position blink cursor
   String display = inputBuffer;
-  while (display.length() < 3) display += "_";
-  display += "V";
-  // Pad to 16 characters
   while (display.length() < 16) display += " ";
 
   lcd.setCursor(0, 0);
   lcd.print("Set target      ");
   lcd.setCursor(0, 1);
   lcd.print(display);
+  lcd.setCursor(inputBuffer.length(), 1);
+}
+
+// ═══════════════════════════════════════════════════════
+//  Input Tolerance Processing
+// ═══════════════════════════════════════════════════════
+void Machine::processToleranceInput(char key) {
+  if (isDigit(key) && inputBuffer.length() < 2) {
+    // Max 2 digits (1-99)
+    inputBuffer += key;
+  } else if (key == '*' && inputBuffer.length() > 0) {
+    // Backspace
+    inputBuffer.remove(inputBuffer.length() - 1);
+  } else if (key == 'A' && inputBuffer.length() > 0) {
+    // Confirm
+    lcd.noBlink();
+    int val = inputBuffer.toInt();
+    if (val >= 1 && val <= 99) {
+      toleranceV = val;
+      EEPROM.write(EEPROM_TOLERANCE_ADDR, (byte)toleranceV);
+
+      inputBuffer = "";
+      uiState = CONFIGURE;
+      displayLCD(true, 0, 0, "[A] Set Voltage");
+      displayLCD(false, 0, 1, "[B] Tolerance");
+      return;
+    } else {
+      displayLCD(true, 0, 0, "Invalid! 1-99");
+      delay(1000);
+      inputBuffer = "";
+    }
+  } else if (key == 'D') {
+    // Cancel
+    lcd.noBlink();
+    inputBuffer = "";
+    uiState = CONFIGURE;
+    displayLCD(true, 0, 0, "[A] Set Voltage");
+    displayLCD(false, 0, 1, "[B] Tolerance");
+    return;
+  }
+
+  // Redraw: show typed digits, pad with spaces, position blink cursor
+  String display = inputBuffer;
+  while (display.length() < 16) display += " ";
+
+  lcd.setCursor(0, 0);
+  lcd.print("Set tolerance   ");
+  lcd.setCursor(0, 1);
+  lcd.print(display);
+  lcd.setCursor(inputBuffer.length(), 1);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -365,6 +426,14 @@ void Machine::keypadPress() {
   char key = k.getKey();
 
   if (key) {
+    // '#' toggles backlight globally (works from any screen)
+    if (key == '#') {
+      backlightOn = !backlightOn;
+      if (backlightOn) lcd.backlight();
+      else lcd.noBacklight();
+      return; // Don't process further
+    }
+
     // Buzzer click feedback
     digitalWrite(BUZZER_PIN, HIGH);
     buzzerOnMillis = millis();
@@ -374,10 +443,9 @@ void Machine::keypadPress() {
 
       case HOME:
         if (key == 'A') {
-          uiState = INPUT_TARGET;
-          inputBuffer = "";
-          displayLCD(true, 0, 0, "Set target      ");
-          displayLCD(false, 0, 1, "___V            ");
+          uiState = CONFIGURE;
+          displayLCD(true, 0, 0, "[A] Set Voltage");
+          displayLCD(false, 0, 1, "[B] Tolerance");
         } else if (key == 'B') {
           uiState = VIEW_STATUS;
           displayLCD(true, 0, 0, "[A] Input");
@@ -385,8 +453,34 @@ void Machine::keypadPress() {
         }
         break;
 
+      case CONFIGURE:
+        if (key == 'A') {
+          uiState = INPUT_TARGET;
+          inputBuffer = "";
+          displayLCD(true, 0, 0, "Set target      ");
+          displayLCD(false, 0, 1, "                ");
+          lcd.setCursor(0, 1);
+          lcd.blink();
+        } else if (key == 'B') {
+          uiState = INPUT_TOLERANCE;
+          inputBuffer = "";
+          displayLCD(true, 0, 0, "Set tolerance   ");
+          displayLCD(false, 0, 1, "                ");
+          lcd.setCursor(0, 1);
+          lcd.blink();
+        } else if (key == 'D') {
+          uiState = HOME;
+          displayLCD(true, 0, 0, "[A] Configure");
+          displayLCD(false, 0, 1, "[B] View Status");
+        }
+        break;
+
       case INPUT_TARGET:
         processTargetInput(key);
+        break;
+
+      case INPUT_TOLERANCE:
+        processToleranceInput(key);
         break;
 
       case VIEW_STATUS:
@@ -400,7 +494,7 @@ void Machine::keypadPress() {
           displayLCD(false, 0, 1, "                ");
         } else if (key == 'D') {
           uiState = HOME;
-          displayLCD(true, 0, 0, "[A] Set Voltage");
+          displayLCD(true, 0, 0, "[A] Configure");
           displayLCD(false, 0, 1, "[B] View Status");
         }
         break;
