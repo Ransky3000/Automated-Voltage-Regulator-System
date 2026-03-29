@@ -29,7 +29,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 Machine machine(keypad, lcd);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("--- AVR System Boot ---");
   machine.Initialize();
 }

@@ -21,11 +21,19 @@ Machine::Machine(Keypad& kRef, LiquidCrystal_I2C& lcdRef)
   toleranceV = DEFAULT_TOLERANCE_V;
   currentVin = 0;
   currentVout = 0;
+  rawVout = 0;
   currentAmps = 0;
   currentWatts = 0;
 
   lastVout = 0;
   lastVoutChangeTime = 0;
+
+  voutSampleIdx = 0;
+  smoothedVout = 0;
+  for (byte i = 0; i < VOUT_AVG_SAMPLES; i++) voutSamples[i] = 0;
+
+  outOfToleranceStart = 0;
+  isConfirmed = false;
 
   inputBuffer = "";
   isLineFull = 0;
@@ -69,6 +77,20 @@ void Machine::Initialize() {
   } else {
     toleranceV = DEFAULT_TOLERANCE_V;
     Serial.println(F("No saved tolerance. Default: 2V"));
+  }
+
+  // Load saved target voltage from EEPROM
+  byte savedTarget = EEPROM.read(EEPROM_TARGET_ADDR);
+  if (savedTarget <= 250 && savedTarget != 0xFF) {
+    targetVoltage = savedTarget;
+    regState = REG_ACTIVE;
+    servoState = SERVO_SETTLING;
+    servoTimer = millis();
+    lastVoutChangeTime = millis();
+    Serial.print(F("Loaded target: "));
+    Serial.println(targetVoltage);
+  } else {
+    Serial.println(F("No saved target."));
   }
 
   // Home servo to 0V position
@@ -199,9 +221,20 @@ void Machine::regulateLoop() {
 
     case SERVO_IDLE:
       if (absError > toleranceV) {
-        // Vout drifted outside tolerance — need to move
-        servoState = SERVO_SETTLING;
-        servoTimer = millis();
+        // Vout outside tolerance — start/continue confirmation timer
+        if (outOfToleranceStart == 0) {
+          outOfToleranceStart = millis();
+        }
+        // Only act after 3 seconds of sustained error
+        if (millis() - outOfToleranceStart >= CONFIRM_DURATION_MS) {
+          isConfirmed = true;
+          servoState = SERVO_SETTLING;
+          servoTimer = millis();
+        }
+      } else {
+        // Back within tolerance — reset timer
+        outOfToleranceStart = 0;
+        isConfirmed = false;
       }
       break;
 
@@ -213,9 +246,11 @@ void Machine::regulateLoop() {
         absError = abs(error);
 
         if (absError <= toleranceV) {
-          // Within tolerance — stay idle
+          // Within tolerance — stay idle, reset confirmation
           servoStop();
           servoState = SERVO_IDLE;
+          outOfToleranceStart = 0;
+          isConfirmed = false;
         } else {
           // Calculate proportional speed based on Vout error
           int speed;
@@ -319,6 +354,7 @@ void Machine::processTargetInput(char key) {
     int val = inputBuffer.toInt();
     if (val >= 0 && val <= 250) {
       targetVoltage = val;
+      EEPROM.write(EEPROM_TARGET_ADDR, (byte)targetVoltage);
       regState = REG_ACTIVE;
       servoState = SERVO_SETTLING;
       servoTimer = millis();
@@ -519,10 +555,20 @@ void Machine::runState() {
   }
 
   // ── 2. Sensor Ticks (Non-blocking) ─────────────────
+  // Dummy reads to prime the ADC MUX (prevents cross-talk between pins)
+  analogRead(VIN_SENSOR_PIN);
   vinSensor.update();
+  analogRead(VOUT_SENSOR_PIN);
   voutSensor.update();
   currentVin = vinSensor.getVoltage();
-  currentVout = voutSensor.getVoltage();
+
+  // Vout moving average (smooths noisy readings)
+  rawVout = voutSensor.getVoltage();
+  voutSamples[voutSampleIdx] = rawVout;
+  voutSampleIdx = (voutSampleIdx + 1) % VOUT_AVG_SAMPLES;
+  float sum = 0;
+  for (byte i = 0; i < VOUT_AVG_SAMPLES; i++) sum += voutSamples[i];
+  currentVout = sum / VOUT_AVG_SAMPLES;
 
   // ACS712: time-sliced read (blocks ~20ms, only every 500ms)
   static unsigned long lastCurrentRead = 0;
@@ -544,6 +590,9 @@ void Machine::runState() {
   unsigned long now = millis();
   if (now - lastLCDTick < 500) return;
   lastLCDTick = now;
+
+  // Serial debug output (same 500ms interval)
+  printDebug();
 
   switch (uiState) {
 
@@ -568,8 +617,13 @@ void Machine::runState() {
       lcd.print((int)currentVout);
       lcd.print("V ");
       lcd.print("I:");
-      lcd.print(currentAmps, 1);
-      lcd.print("A  ");
+      if (currentAmps >= 1.0) {
+        lcd.print(currentAmps, 1);
+        lcd.print("A  ");
+      } else {
+        lcd.print((int)(currentAmps * 1000));
+        lcd.print("mA ");
+      }
 
       // Line 2: "P: <Watts>W" + alarm indicator
       lcd.setCursor(0, 1);
@@ -592,4 +646,93 @@ void Machine::runState() {
       // HOME, INPUT_TARGET, VIEW_STATUS: static menus, no live update needed
       break;
   }
+}
+
+// ═══════════════════════════════════════════════════════
+//  Serial Debug Output (Fixed-Width Columns)
+// ═══════════════════════════════════════════════════════
+void Machine::printDebug() {
+  char buf[12];
+
+  // Col 1: Vin (4 chars)
+  sprintf(buf, "%4d", (int)currentVin);
+  Serial.print(F("Vin:"));
+  Serial.print(buf);
+  Serial.print(F("V"));
+
+  // Col 2: Vout raw (4 chars)
+  sprintf(buf, "%4d", (int)rawVout);
+  Serial.print(F(" | Vout:"));
+  Serial.print(buf);
+  Serial.print(F("V"));
+
+  // Col 3: Vout averaged (4 chars)
+  sprintf(buf, "%4d", (int)currentVout);
+  Serial.print(F(" | V_avg:"));
+  Serial.print(buf);
+  Serial.print(F("V"));
+
+  // Col 4: Current (auto A/mA)
+  Serial.print(F(" | I:"));
+  if (currentAmps >= 1.0) {
+    int amps_int = (int)(currentAmps * 100);
+    sprintf(buf, "%d.%02d", amps_int / 100, amps_int % 100);
+    Serial.print(buf);
+    Serial.print(F("A"));
+  } else {
+    sprintf(buf, "%4d", (int)(currentAmps * 1000));
+    Serial.print(buf);
+    Serial.print(F("mA"));
+  }
+
+  // Col 5: POT (4 chars)
+  sprintf(buf, "%4d", analogRead(SERVO_POT_PIN));
+  Serial.print(F(" | POT:"));
+  Serial.print(buf);
+
+  // Col 6: Target (4 chars)
+  Serial.print(F(" | Tgt:"));
+  if (targetVoltage >= 0) {
+    sprintf(buf, "%4d", targetVoltage);
+    Serial.print(buf);
+    Serial.print(F("V"));
+  } else {
+    Serial.print(F("  ---"));
+  }
+
+  // Col 7: Tolerance (3 chars)
+  sprintf(buf, "%2d", toleranceV);
+  Serial.print(F(" | Tol:+-"));
+  Serial.print(buf);
+  Serial.print(F("V"));
+
+  // Col 8: Regulator state (7 chars)
+  Serial.print(F(" | Reg:"));
+  switch (regState) {
+    case REG_IDLE:          Serial.print(F("IDLE   ")); break;
+    case REG_ACTIVE:        Serial.print(F("ACTIVE ")); break;
+    case REG_UNDER_VOLTAGE: Serial.print(F("UNDER_V")); break;
+    case REG_OVER_VOLTAGE:  Serial.print(F("OVER_V ")); break;
+  }
+
+  // Col 9: Servo state (6 chars)
+  Serial.print(F(" | Srv:"));
+  switch (servoState) {
+    case SERVO_IDLE:     Serial.print(F("IDLE  ")); break;
+    case SERVO_PULSING:  Serial.print(F("PULSE ")); break;
+    case SERVO_SETTLING: Serial.print(F("SETTLE")); break;
+  }
+
+  // Col 10: Confirmation timer (9 chars)
+  Serial.print(F(" | Cfm:"));
+  if (outOfToleranceStart > 0) {
+    int elapsed_ms = (int)(millis() - outOfToleranceStart);
+    sprintf(buf, "%d.%d", elapsed_ms / 1000, (elapsed_ms % 1000) / 100);
+    Serial.print(buf);
+    Serial.print(F("s/3.0s"));
+  } else {
+    Serial.print(F("---      "));
+  }
+
+  Serial.println();
 }

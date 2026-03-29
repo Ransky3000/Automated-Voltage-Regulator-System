@@ -24,6 +24,7 @@
 
 // ─── EEPROM ──────────────────────────────────────────
 #define EEPROM_TOLERANCE_ADDR  0  // Tolerance stored at byte 0
+#define EEPROM_TARGET_ADDR     1  // Target voltage stored at byte 1
 
 // ─── Servo Pulse Timing ──────────────────────────────
 #define PULSE_DURATION_MS   80
@@ -34,6 +35,8 @@
 #define DEFAULT_TOLERANCE_V  2     // Default ±2V if user hasn't set one
 #define STALL_TIMEOUT   3000  // ms without Vout change = stalled
 #define MIN_VIN_V       5     // Minimum Vin to start regulating
+#define VOUT_AVG_SAMPLES     10    // Moving average window size
+#define CONFIRM_DURATION_MS  3000  // 3s confirmation before servo acts
 
 // ─── ACS712 20A ──────────────────────────────────────
 #define ACS712_SENSITIVITY  0.100f  // V/A for 20A model
@@ -93,12 +96,22 @@ class Machine {
     int toleranceV;             // User-configurable ± tolerance (default 2V)
     float currentVin;
     float currentVout;
+    float rawVout;              // Pre-averaged Vout for debug
     float currentAmps;
     float currentWatts;
 
     // ── Stall Detection ──
     float lastVout;
     unsigned long lastVoutChangeTime;
+
+    // ── Voltage Smoothing ──
+    float voutSamples[VOUT_AVG_SAMPLES];
+    byte voutSampleIdx;
+    float smoothedVout;
+
+    // ── Confirmation Window ──
+    unsigned long outOfToleranceStart;
+    bool isConfirmed;
 
     // ── UI ──
     String inputBuffer;
@@ -133,6 +146,9 @@ class Machine {
 
     // Sensor
     float readCurrent();
+
+    // Debug
+    void printDebug();
 
   public:
     Machine(Keypad& kRef, LiquidCrystal_I2C& lcdRef);
