@@ -6,7 +6,8 @@
 Machine::Machine(Keypad& kRef, LiquidCrystal_I2C& lcdRef)
   : k(kRef), lcd(lcdRef),
     vinSensor(VIN_SENSOR_PIN, ZMPT_FREQUENCY),
-    voutSensor(VOUT_SENSOR_PIN, ZMPT_FREQUENCY)
+    voutSensor(VOUT_SENSOR_PIN, ZMPT_FREQUENCY),
+    currentSensor(CSM_OUT_PIN, 5.0, 1023)
 {
   uiState = HOME;
   regState = REG_IDLE;
@@ -15,7 +16,6 @@ Machine::Machine(Keypad& kRef, LiquidCrystal_I2C& lcdRef)
   servoAttached = false;
   pulseDirection = 0;
   servoTimer = 0;
-  hasCalibration = false;
 
   targetVoltage = -1;
   toleranceV = DEFAULT_TOLERANCE_V;
@@ -44,7 +44,6 @@ void Machine::Initialize() {
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
   pinMode(SERVO_POT_PIN, INPUT);
-  pinMode(CSM_OUT_PIN, INPUT);
 
   // LCD
   lcd.init();
@@ -56,8 +55,10 @@ void Machine::Initialize() {
   vinSensor.setSensitivity(ZMPT_SENSITIVITY);
   voutSensor.setSensitivity(ZMPT_SENSITIVITY);
 
-  // Load EEPROM calibration for servo
-  loadCalibration();
+  // ACS712 Current Sensor
+  currentSensor.setSensitivity(ACS712_SENSITIVITY);
+  currentSensor.calibrate();  // Auto-zero with no load
+  Serial.println(F("ACS712 calibrated"));
 
   // Load saved tolerance from EEPROM
   byte savedTol = EEPROM.read(EEPROM_TOLERANCE_ADDR);
@@ -70,7 +71,10 @@ void Machine::Initialize() {
     Serial.println(F("No saved tolerance. Default: 2V"));
   }
 
-  delay(2000);
+  // Home servo to 0V position
+  homeToZero();
+
+  delay(1000);
 
   // Show Home Screen
   uiState = HOME;
@@ -122,68 +126,72 @@ void Machine::servoStop() {
 }
 
 // ═══════════════════════════════════════════════════════
-//  EEPROM Calibration
+//  Home to 0V using POT feedback
 // ═══════════════════════════════════════════════════════
-void Machine::loadCalibration() {
-  if (EEPROM.read(0) == EEPROM_MAGIC && EEPROM.read(1) == CAL_POINTS) {
-    hasCalibration = true;
-    for (int i = 0; i < CAL_POINTS; i++) {
-      int addr = 2 + (i * 2);
-      calPotValues[i] = EEPROM.read(addr) | (EEPROM.read(addr + 1) << 8);
+void Machine::homeToZero() {
+  int potVal = analogRead(SERVO_POT_PIN);
+
+  // Already at 0V position?
+  if (potVal <= POT_HOME_VALUE) {
+    Serial.println(F("Already at 0V position."));
+    return;
+  }
+
+  // Show homing status on LCD
+  displayLCD(true, 0, 0, "Homing to 0V...");
+  displayLCD(false, 0, 1, "Please wait");
+  Serial.println(F("Homing servo to 0V..."));
+
+  // Spin CCW slowly until POT reaches 0V stop
+  servoStart(HOME_SPEED);
+
+  unsigned long homeStart = millis();
+  const unsigned long HOME_TIMEOUT = 15000; // 15s max homing time
+
+  while (true) {
+    potVal = analogRead(SERVO_POT_PIN);
+
+    // Reached 0V position
+    if (potVal <= POT_HOME_VALUE) {
+      servoStop();
+      Serial.print(F("Homed! POT: "));
+      Serial.println(potVal);
+      displayLCD(true, 0, 0, "Homed to 0V");
+      delay(500);
+      return;
     }
-    Serial.println(F("EEPROM Calibration Loaded (51 points)"));
-  } else {
-    hasCalibration = false;
-    Serial.println(F("No EEPROM calibration. Using linear map()."));
+
+    // Timeout safety
+    if (millis() - homeStart > HOME_TIMEOUT) {
+      servoStop();
+      Serial.println(F("HOME TIMEOUT! Could not reach 0V."));
+      displayLCD(true, 0, 0, "Home failed!");
+      displayLCD(false, 0, 1, "Check servo");
+      delay(2000);
+      return;
+    }
   }
 }
 
-int Machine::potToVoltage(int potVal) {
-  if (!hasCalibration) {
-    return map(potVal, POT_MIN, POT_MAX, 0, VARIAC_MAX_V);
-  }
-
-  // Handle out of bounds
-  int minP = min(calPotValues[0], calPotValues[CAL_POINTS - 1]);
-  int maxP = max(calPotValues[0], calPotValues[CAL_POINTS - 1]);
-  if (potVal <= minP) return (calPotValues[0] < calPotValues[CAL_POINTS - 1]) ? 0 : VARIAC_MAX_V;
-  if (potVal >= maxP) return (calPotValues[0] < calPotValues[CAL_POINTS - 1]) ? VARIAC_MAX_V : 0;
-
-  // Linear interpolation between closest calibrated points
-  for (int i = 0; i < CAL_POINTS - 1; i++) {
-    int p1 = min(calPotValues[i], calPotValues[i + 1]);
-    int p2 = max(calPotValues[i], calPotValues[i + 1]);
-
-    if (potVal >= p1 && potVal <= p2) {
-      int v1 = i * CAL_STEP_V;
-      int v2 = (i + 1) * CAL_STEP_V;
-      return map(potVal, calPotValues[i], calPotValues[i + 1], v1, v2);
-    }
-  }
-  return VARIAC_MAX_V; // Fallback
-}
-
 // ═══════════════════════════════════════════════════════
-//  Current Sensor (ACS712 20A)
+//  Current Sensor (ACS712 20A via ACS712-driver library)
 // ═══════════════════════════════════════════════════════
 float Machine::readCurrent() {
-  int raw = analogRead(CSM_OUT_PIN);
-  float voltage = (raw / 1023.0) * 5.0;
-  float amps = (voltage - ACS712_ZERO_POINT) / ACS712_SENSITIVITY;
-  return abs(amps); // We only care about magnitude
+  // Time-sliced AC reading: blocks ~20ms but only called every 500ms
+  return currentSensor.readCurrentAC(60);
 }
 
 // ═══════════════════════════════════════════════════════
-//  Regulation Loop (Pulse-and-Wait)
+//  Regulation Loop (Vout Closed-Loop, Pulse-and-Wait)
 // ═══════════════════════════════════════════════════════
 void Machine::regulateLoop() {
-  int rawPot = analogRead(SERVO_POT_PIN);
-  int constrainedPot = constrain(rawPot, POT_MIN, POT_MAX);
-  int dialPosition = potToVoltage(constrainedPot);
+  // Skip regulation if no AC input
+  if (currentVin < MIN_VIN_V) {
+    servoStop();
+    servoState = SERVO_IDLE;
+    return;
+  }
 
-  // Calculate required rotary position from Vin and target
-  // Formula: Required Rotary = Vout_target × 220 / Vin
-  // But we also use the Vout feedback to refine
   int error = targetVoltage - (int)currentVout;
   int absError = abs(error);
 
@@ -191,7 +199,7 @@ void Machine::regulateLoop() {
 
     case SERVO_IDLE:
       if (absError > toleranceV) {
-        // Drift detected — need to move
+        // Vout drifted outside tolerance — need to move
         servoState = SERVO_SETTLING;
         servoTimer = millis();
       }
@@ -205,11 +213,11 @@ void Machine::regulateLoop() {
         absError = abs(error);
 
         if (absError <= toleranceV) {
-          // At target!
+          // Within tolerance — stay idle
           servoStop();
           servoState = SERVO_IDLE;
         } else {
-          // Calculate proportional speed
+          // Calculate proportional speed based on Vout error
           int speed;
           if (absError > 30) speed = 200;
           else if (absError > 10) speed = 100;
@@ -224,18 +232,6 @@ void Machine::regulateLoop() {
             pulseDirection = -1;  // CCW = decrease voltage
           }
 
-          // Direction-aware safety limits
-          if (pulseDirection == -1 && constrainedPot <= POT_MIN) {
-            servoStop();
-            servoState = SERVO_IDLE;
-            break;
-          }
-          if (pulseDirection == 1 && constrainedPot >= POT_MAX) {
-            servoStop();
-            servoState = SERVO_IDLE;
-            break;
-          }
-
           servoStart(servoCmd);
           servoState = SERVO_PULSING;
           servoTimer = millis();
@@ -244,18 +240,7 @@ void Machine::regulateLoop() {
       break;
 
     case SERVO_PULSING:
-      // Real-time safety during pulse
-      if (pulseDirection == 1 && constrainedPot >= POT_MAX) {
-        servoStop();
-        servoState = SERVO_IDLE;
-        break;
-      }
-      if (pulseDirection == -1 && constrainedPot <= POT_MIN) {
-        servoStop();
-        servoState = SERVO_IDLE;
-        break;
-      }
-      // Pulse timer expired
+      // Pulse timer expired — stop and settle
       if (millis() - servoTimer >= PULSE_DURATION_MS) {
         servoStop();
         servoState = SERVO_SETTLING;
@@ -538,8 +523,14 @@ void Machine::runState() {
   voutSensor.update();
   currentVin = vinSensor.getVoltage();
   currentVout = voutSensor.getVoltage();
-  currentAmps = readCurrent();
-  currentWatts = currentVout * currentAmps;
+
+  // ACS712: time-sliced read (blocks ~20ms, only every 500ms)
+  static unsigned long lastCurrentRead = 0;
+  if (millis() - lastCurrentRead >= 500) {
+    currentAmps = readCurrent();
+    currentWatts = currentVout * currentAmps;
+    lastCurrentRead = millis();
+  }
 
   // ── 3. Regulation Ticks ────────────────────────────
   if (regState == REG_ACTIVE) {

@@ -8,38 +8,35 @@
 #include <Servo.h>
 #include <EEPROM.h>
 #include <ZMPT101B_DRIVER.h>
+#include <ACS712-driver.h>
 
 // ─── Pin Assignments ─────────────────────────────────
 #define SERVO_PIN       3
 #define BUZZER_PIN      5
-#define SERVO_POT_PIN   A2
+#define SERVO_POT_PIN   A2    // Kept for debug only (not used in control)
 #define VIN_SENSOR_PIN  A3
 #define VOUT_SENSOR_PIN A0
 #define CSM_OUT_PIN     A1
 
 // ─── Physical Limits ─────────────────────────────────
-#define POT_MIN         10
-#define POT_MAX         670
 #define VARIAC_MAX_V    250
+#define POT_HOME_VALUE  5    // POT reading at 0V physical stop (adjust after testing)
 
-// ─── EEPROM Calibration Constants ────────────────────
-#define CAL_STEP_V      5
-#define CAL_POINTS      51    // (250 / 5) + 1
-#define EEPROM_MAGIC    0xCA
-#define EEPROM_TOLERANCE_ADDR  104  // After calibration table (2 + 51×2 = 104)
+// ─── EEPROM ──────────────────────────────────────────
+#define EEPROM_TOLERANCE_ADDR  0  // Tolerance stored at byte 0
 
 // ─── Servo Pulse Timing ──────────────────────────────
 #define PULSE_DURATION_MS   80
 #define SETTLE_DURATION_MS  150
+#define HOME_SPEED          1300  // Servo speed for homing (CCW, slow)
 
 // ─── Regulation ──────────────────────────────────────
 #define DEFAULT_TOLERANCE_V  2     // Default ±2V if user hasn't set one
 #define STALL_TIMEOUT   3000  // ms without Vout change = stalled
+#define MIN_VIN_V       5     // Minimum Vin to start regulating
 
 // ─── ACS712 20A ──────────────────────────────────────
-// Sensitivity: 100 mV/A, Zero-current voltage: VCC/2 (2.5V)
-#define ACS712_SENSITIVITY  0.100f  // V per Amp
-#define ACS712_ZERO_POINT   2.5f    // Volts at 0A
+#define ACS712_SENSITIVITY  0.100f  // V/A for 20A model
 
 // ─── ZMPT101B ────────────────────────────────────────
 #define ZMPT_SENSITIVITY    500.0f
@@ -79,6 +76,7 @@ class Machine {
     Servo variacServo;
     ZMPT101B vinSensor;
     ZMPT101B voutSensor;
+    ACS712 currentSensor;
 
     // ── State Tracking ──
     UIState uiState;
@@ -89,8 +87,6 @@ class Machine {
     bool servoAttached;
     int pulseDirection;         // +1 = CW (increase), -1 = CCW (decrease)
     unsigned long servoTimer;
-    uint16_t calPotValues[CAL_POINTS];
-    bool hasCalibration;
 
     // ── Regulation ──
     int targetVoltage;          // -1 = no target
@@ -128,15 +124,12 @@ class Machine {
     // Servo helpers
     void servoStart(int speed);
     void servoStop();
+    void homeToZero();
     
-    // Control loop
+    // Control loop (Vout closed-loop)
     void regulateLoop();
     void checkAlarms();
     void checkAlarmRecovery();
-    
-    // Calibration
-    int potToVoltage(int potVal);
-    void loadCalibration();
 
     // Sensor
     float readCurrent();
