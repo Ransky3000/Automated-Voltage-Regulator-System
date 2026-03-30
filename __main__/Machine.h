@@ -36,7 +36,7 @@
 #define STALL_TIMEOUT   3000  // ms without Vout change = stalled
 #define MIN_VIN_V       5     // Minimum Vin to start regulating
 #define VOUT_AVG_SAMPLES     10    // Moving average window size
-#define CONFIRM_DURATION_MS  3000  // 3s confirmation before servo acts
+#define CONFIRM_DURATION_MS  1000  // 3s confirmation before servo acts
 
 // ─── ACS712 20A ──────────────────────────────────────
 #define ACS712_SENSITIVITY  0.100f  // V/A for 20A model

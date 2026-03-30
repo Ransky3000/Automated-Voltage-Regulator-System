@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Documentation — Automated Voltage Regulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-2: #222632;
+      --border: #2d3348;
+      --text: #e4e6ee;
+      --text-dim: #8b90a5;
+      --accent: #6c8aff;
+      --accent-dim: #3d4f8f;
+      --green: #4ade80;
+      --green-dim: #1a3a2a;
+      --yellow: #facc15;
+      --yellow-dim: #3a3520;
+      --red: #f87171;
+      --red-dim: #3a1a1a;
+      --cyan: #22d3ee;
+      --purple: #a78bfa;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .hero {
+      text-align: center;
+      padding: 3rem 2rem;
+      margin-bottom: 3rem;
+      background: linear-gradient(135deg, #1a1d27 0%, #1e2235 50%, #1a2030 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--cyan), var(--purple));
+    }
+    .hero h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    .hero p {
+      color: var(--text-dim);
+      font-size: 1.05rem;
+    }
+
+    /* Navigation */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 3rem;
+    }
+    .toc h2 {
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 1rem;
+    }
+    .toc ul {
+      list-style: none;
+      columns: 2;
+      column-gap: 2rem;
+    }
+    .toc li { margin-bottom: 0.4rem; }
+    .toc a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+    .toc a:hover { color: var(--cyan); }
+
+    /* Sections */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      transition: border-color 0.3s;
+    }
+    .section:hover { border-color: var(--accent-dim); }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    h2 .emoji { font-size: 1.3rem; }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--cyan);
+      margin: 1.5rem 0 0.8rem;
+    }
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--purple);
+      margin: 1.2rem 0 0.6rem;
+    }
+
+    p { margin-bottom: 0.8rem; color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    th {
+      background: var(--surface-2);
+      padding: 0.7rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    td {
+      padding: 0.6rem 1rem;
+      border-top: 1px solid var(--border);
+    }
+    tr:hover td { background: rgba(108, 138, 255, 0.04); }
+
+    /* Code */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface-2);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: var(--cyan);
+    }
+    pre {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem 1.5rem;
+      overflow-x: auto;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: var(--text);
+    }
+
+    /* Keyword colors in code */
+    .kw { color: var(--purple); }
+    .type { color: var(--cyan); }
+    .str { color: var(--green); }
+    .comment { color: var(--text-dim); font-style: italic; }
+    .num { color: var(--yellow); }
+
+    /* Callout boxes */
+    .callout {
+      padding: 1rem 1.2rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      border-left: 4px solid;
+    }
+    .callout.warn {
+      background: var(--yellow-dim);
+      border-color: var(--yellow);
+    }
+    .callout.warn .label { color: var(--yellow); }
+    .callout.info {
+      background: rgba(108, 138, 255, 0.08);
+      border-color: var(--accent);
+    }
+    .callout.info .label { color: var(--accent); }
+    .callout .label {
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.3rem;
+    }
+
+    /* Flow diagram */
+    .flow {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      white-space: pre;
+      overflow-x: auto;
+      color: var(--text-dim);
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge.pub { background: var(--green-dim); color: var(--green); }
+    .badge.priv { background: var(--accent-dim); color: var(--accent); }
+    .badge.line { background: var(--surface-2); color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+
+    /* Links */
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--cyan); text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body { padding: 1rem; }
+      .toc ul { columns: 1; }
+      .hero h1 { font-size: 1.6rem; }
+      .section { padding: 1.2rem; }
+      table { font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>📖 Code Documentation</h1>
+    <p>Automated Voltage Regulator System — <code>__main__/</code> Program Reference</p>
+  </div>
+
+  <!-- Table of Contents -->
+  <nav class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+      <li><a href="#files">📂 File Overview</a></li>
+      <li><a href="#main-ino">📄 __main__.ino</a></li>
+      <li><a href="#libraries">📚 Libraries Used</a></li>
+      <li><a href="#constants">⚙️ Constants</a></li>
+      <li><a href="#enums">🔀 Enums</a></li>
+      <li><a href="#members">📦 Member Variables</a></li>
+      <li><a href="#methods">🔧 Methods</a></li>
+      <li><a href="#constructor">Constructor</a></li>
+      <li><a href="#initialize">Initialize()</a></li>
+      <li><a href="#lcd-helpers">LCD Helpers</a></li>
+      <li><a href="#servo">Servo Control</a></li>
+      <li><a href="#homing">Homing</a></li>
+      <li><a href="#current">Current Sensor</a></li>
+      <li><a href="#regulate">Regulation Loop</a></li>
+      <li><a href="#alarms">Alarms &amp; Recovery</a></li>
+      <li><a href="#input">Input Processing</a></li>
+      <li><a href="#keypad">Keypad Handler</a></li>
+      <li><a href="#runstate">runState()</a></li>
+      <li><a href="#debug">Serial Debug</a></li>
+      <li><a href="#flow">Execution Flow</a></li>
+    </ul>
+  </nav>
+
+  <!-- File Overview -->
+  <div class="section" id="files">
+    <h2><span class="emoji">📂</span> File Overview</h2>
+    <table>
+      <tr><th>File</th><th>Purpose</th><th>Lines</th></tr>
+      <tr><td><code>__main__.ino</code></td><td>Entry point — hardware wiring, <code>setup()</code>, <code>loop()</code></td><td>~41</td></tr>
+      <tr><td><code>Machine.h</code></td><td>Class definition — constants, enums, member declarations</td><td>~161</td></tr>
+      <tr><td><code>Machine.cpp</code></td><td>Class implementation — all logic and behavior</td><td>~739</td></tr>
+    </table>
+  </div>
+
+  <!-- __main__.ino -->
+  <div class="section" id="main-ino">
+    <h2><span class="emoji">📄</span> __main__.ino — Entry Point</h2>
+    <p>This file is intentionally minimal. It handles only hardware instantiation and the Arduino <code>setup()</code>/<code>loop()</code> lifecycle.</p>
+
+    <h3>What It Does</h3>
+    <table>
+      <tr><th>#</th><th>Step</th><th>Detail</th></tr>
+      <tr><td>1</td><td>Includes</td><td>Pulls in <code>Machine.h</code> and all required libraries</td></tr>
+      <tr><td>2</td><td>Keypad Setup</td><td>Defines 4×4 key matrix, rows D6–D9, cols D10–D13</td></tr>
+      <tr><td>3</td><td>LCD Setup</td><td>I2C address <code>0x27</code>, 16 columns × 2 rows</td></tr>
+      <tr><td>4</td><td>Machine Object</td><td>Passes keypad and LCD by reference</td></tr>
+      <tr><td>5</td><td><code>setup()</code></td><td>Serial at 115200 baud → <code>machine.Initialize()</code></td></tr>
+      <tr><td>6</td><td><code>loop()</code></td><td><code>keypadPress()</code> → <code>runState()</code> every iteration</td></tr>
+    </table>
+
+    <div class="callout info">
+      <div class="label">Design Note</div>
+      All logic lives inside the <code>Machine</code> class. This keeps <code>__main__.ino</code> as a thin wiring layer — no business logic, no state management.
+    </div>
+  </div>
+
+  <!-- Libraries -->
+  <div class="section" id="libraries">
+    <h2><span class="emoji">📚</span> Libraries Used</h2>
+    <table>
+      <tr><th>Library</th><th>Include</th><th>Purpose</th></tr>
+      <tr><td>Arduino Core</td><td><code>&lt;Arduino.h&gt;</code></td><td>Core functions (<code>millis()</code>, <code>analogRead()</code>, etc.)</td></tr>
+      <tr><td>Keypad</td><td><code>&lt;Keypad.h&gt;</code></td><td>4×4 matrix keypad scanning</td></tr>
+      <tr><td>Wire</td><td><code>&lt;Wire.h&gt;</code></td><td>I2C communication bus</td></tr>
+      <tr><td>LCD</td><td><code>&lt;LiquidCrystal_I2C.h&gt;</code></td><td>16×2 LCD via PCF8574 I2C expander</td></tr>
+      <tr><td>Servo</td><td><code>&lt;Servo.h&gt;</code></td><td>PWM servo control (continuous rotation)</td></tr>
+      <tr><td>EEPROM</td><td><code>&lt;EEPROM.h&gt;</code></td><td>Persistent storage for target and tolerance</td></tr>
+      <tr><td>Voltage Sensor</td><td><code>&lt;ZMPT101B_DRIVER.h&gt;</code></td><td>AC voltage sensing (non-blocking RMS, 4kHz)</td></tr>
+      <tr><td>Current Sensor</td><td><code>&lt;ACS712-driver.h&gt;</code></td><td>AC current sensing (blocking RMS, time-sliced)</td></tr>
+    </table>
+  </div>
+
+  <!-- Constants -->
+  <div class="section" id="constants">
+    <h2><span class="emoji">⚙️</span> Constants</h2>
+
+    <h3>Pin Assignments</h3>
+    <table>
+      <tr><th>Constant</th><th>Value</th><th>Description</th></tr>
+      <tr><td><code>SERVO_PIN</code></td><td><code>3</code></td><td>PWM output to MG996R servo</td></tr>
+      <tr><td><code>BUZZER_PIN</code></td><td><code>5</code></td><td>Piezo buzzer for feedback &amp; alarms</td></tr>
+      <tr><td><code>SERVO_POT_PIN</code></td><td><code>A2</code></td><td>Servo internal potentiometer (homing only)</td></tr>
+      <tr><td><code>VIN_SENSOR_PIN</code></td><td><code>A3</code></td><td>ZMPT101B #1 — input voltage</td></tr>
+      <tr><td><code>VOUT_SENSOR_PIN</code></td><td><code>A0</code></td><td>ZMPT101B #2 — output voltage</td></tr>
+      <tr><td><code>CSM_OUT_PIN</code></td><td><code>A1</code></td><td>ACS712 20A — output current</td></tr>
+    </table>
+
+    <h3>Physical Limits</h3>
+    <table>
+      <tr><th>Constant</th><th>Value</th><th>Description</th></tr>
+      <tr><td><code>VARIAC_MAX_V</code></td><td><code>250</code></td><td>Maximum Variac dial position</td></tr>
+      <tr><td><code>POT_HOME_VALUE</code></td><td><code>5</code></td><td>ADC reading at 0V physical stop</td></tr>
+    </table>
+
+    <h3>EEPROM Addresses</h3>
+    <table>
+      <tr><th>Constant</th><th>Value</th><th>Description</th></tr>
+      <tr><td><code>EEPROM_TOLERANCE_ADDR</code></td><td><code>0</code></td><td>Byte 0: tolerance (1–99, <code>0xFF</code> = default)</td></tr>
+      <tr><td><code>EEPROM_TARGET_ADDR</code></td><td><code>1</code></td><td>Byte 1: target voltage (0–250, <code>0xFF</code> = none)</td></tr>
+    </table>
+
+    <h3>Servo Pulse Timing</h3>
+    <table>
+      <tr><th>Constant</th><th>Value</th><th>Description</th></tr>
+      <tr><td><code>PULSE_DURATION_MS</code></td><td><code>80</code></td><td>Spin time per pulse (ms)</td></tr>
+      <tr><td><code>SETTLE_DURATION_MS</code></td><td><code>150</code></td><td>Wait time after pulse for mechanics to settle</td></tr>
+      <tr><td><code>HOME_SPEED</code></td><td><code>1300</code></td><td>Servo µs for homing (slow CCW)</td></tr>
+    </table>
+
+    <h3>Regulation</h3>
+    <table>
+      <tr><th>Constant</th><th>Value</th><th>Description</th></tr>
+      <tr><td><code>DEFAULT_TOLERANCE_V</code></td><td><code>2</code></td><td>Default ±2V if no EEPROM value</td></tr>
+      <tr><td><code>STALL_TIMEOUT</code></td><td><code>3000</code></td><td>Vout unchanged for 3s while pulsing → alarm</td></tr>
+      <tr><td><code>MIN_VIN_V</code></td><td><code>5</code></td><td>Below this = generator off, skip regulation</td></tr>
+      <tr><td><code>VOUT_AVG_SAMPLES</code></td><td><code>10</code></td><td>Moving average window size</td></tr>
+      <tr><td><code>CONFIRM_DURATION_MS</code></td><td><code>3000</code></td><td>Must stay outside tolerance this long before acting</td></tr>
+    </table>
+
+    <h3>Sensor Calibration</h3>
+    <table>
+      <tr><th>Constant</th><th>Value</th><th>Description</th></tr>
+      <tr><td><code>ACS712_SENSITIVITY</code></td><td><code>0.100</code></td><td>V/A for ACS712-20A model</td></tr>
+      <tr><td><code>ZMPT_SENSITIVITY</code></td><td><code>500.0</code></td><td>ZMPT101B sensitivity factor</td></tr>
+      <tr><td><code>ZMPT_FREQUENCY</code></td><td><code>60.0</code></td><td>AC frequency in Hz</td></tr>
+    </table>
+  </div>
+
+  <!-- Enums -->
+  <div class="section" id="enums">
+    <h2><span class="emoji">🔀</span> Enums</h2>
+
+    <h3>UIState — What the LCD shows</h3>
+    <table>
+      <tr><th>Value</th><th>Description</th></tr>
+      <tr><td><code>HOME</code></td><td>Main menu: [A] Configure / [B] View Status</td></tr>
+      <tr><td><code>CONFIGURE</code></td><td>Sub-menu: [A] Set Voltage / [B] Tolerance</td></tr>
+      <tr><td><code>INPUT_TARGET</code></td><td>Numeric input for target voltage (0–250)</td></tr>
+      <tr><td><code>INPUT_TOLERANCE</code></td><td>Numeric input for tolerance (1–99)</td></tr>
+      <tr><td><code>VIEW_STATUS</code></td><td>Sub-menu: [A] Input / [B] Output</td></tr>
+      <tr><td><code>VIEW_INPUT</code></td><td>Live display: Vin</td></tr>
+      <tr><td><code>VIEW_OUTPUT</code></td><td>Live display: Vout, Current, Power, Alarms</td></tr>
+    </table>
+
+    <h3>RegulatorState — Regulation mode</h3>
+    <table>
+      <tr><th>Value</th><th>Description</th></tr>
+      <tr><td><code>REG_IDLE</code></td><td>No target set — servo does nothing</td></tr>
+      <tr><td><code>REG_ACTIVE</code></td><td>Actively monitoring and correcting Vout</td></tr>
+      <tr><td><code>REG_UNDER_VOLTAGE</code></td><td>Variac maxed out — Vin too low to reach target</td></tr>
+      <tr><td><code>REG_OVER_VOLTAGE</code></td><td>Variac at minimum — Vin too high</td></tr>
+    </table>
+
+    <h3>ServoState — Pulse-and-wait FSM</h3>
+    <table>
+      <tr><th>Value</th><th>Description</th></tr>
+      <tr><td><code>SERVO_IDLE</code></td><td>Not moving — within tolerance</td></tr>
+      <tr><td><code>SERVO_PULSING</code></td><td>Spinning for <code>PULSE_DURATION_MS</code></td></tr>
+      <tr><td><code>SERVO_SETTLING</code></td><td>Stopped — waiting <code>SETTLE_DURATION_MS</code> before re-reading</td></tr>
+    </table>
+  </div>
+
+  <!-- Member Variables -->
+  <div class="section" id="members">
+    <h2><span class="emoji">📦</span> Member Variables</h2>
+
+    <h3>Hardware References</h3>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Description</th></tr>
+      <tr><td><code>Keypad&amp;</code></td><td><code>k</code></td><td>Reference to keypad object</td></tr>
+      <tr><td><code>LiquidCrystal_I2C&amp;</code></td><td><code>lcd</code></td><td>Reference to LCD object</td></tr>
+      <tr><td><code>Servo</code></td><td><code>variacServo</code></td><td>Servo for PWM control</td></tr>
+      <tr><td><code>ZMPT101B</code></td><td><code>vinSensor</code></td><td>Voltage sensor on A3 (input)</td></tr>
+      <tr><td><code>ZMPT101B</code></td><td><code>voutSensor</code></td><td>Voltage sensor on A0 (output)</td></tr>
+      <tr><td><code>ACS712</code></td><td><code>currentSensor</code></td><td>Current sensor on A1</td></tr>
+    </table>
+
+    <h3>State Tracking</h3>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Description</th></tr>
+      <tr><td><code>UIState</code></td><td><code>uiState</code></td><td>Current LCD screen</td></tr>
+      <tr><td><code>RegulatorState</code></td><td><code>regState</code></td><td>Current regulation mode</td></tr>
+      <tr><td><code>ServoState</code></td><td><code>servoState</code></td><td>Current pulse-and-wait phase</td></tr>
+    </table>
+
+    <h3>Servo Control</h3>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Description</th></tr>
+      <tr><td><code>bool</code></td><td><code>servoAttached</code></td><td>Whether servo PWM is active</td></tr>
+      <tr><td><code>int</code></td><td><code>pulseDirection</code></td><td><code>+1</code> = CW (increase), <code>-1</code> = CCW (decrease)</td></tr>
+      <tr><td><code>unsigned long</code></td><td><code>servoTimer</code></td><td>Timestamp for pulse/settle timing</td></tr>
+    </table>
+
+    <h3>Regulation</h3>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Description</th></tr>
+      <tr><td><code>int</code></td><td><code>targetVoltage</code></td><td>User-set target (<code>-1</code> = none)</td></tr>
+      <tr><td><code>int</code></td><td><code>toleranceV</code></td><td>Acceptable ± deviation from target</td></tr>
+      <tr><td><code>float</code></td><td><code>currentVin</code></td><td>Latest Vin reading</td></tr>
+      <tr><td><code>float</code></td><td><code>currentVout</code></td><td>Smoothed Vout (moving average)</td></tr>
+      <tr><td><code>float</code></td><td><code>rawVout</code></td><td>Raw Vout before averaging (for debug)</td></tr>
+      <tr><td><code>float</code></td><td><code>currentAmps</code></td><td>Latest current reading</td></tr>
+      <tr><td><code>float</code></td><td><code>currentWatts</code></td><td>Calculated power (Vout × Amps)</td></tr>
+    </table>
+
+    <h3>Stall Detection</h3>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Description</th></tr>
+      <tr><td><code>float</code></td><td><code>lastVout</code></td><td>Previous Vout for change detection</td></tr>
+      <tr><td><code>unsigned long</code></td><td><code>lastVoutChangeTime</code></td><td>When Vout last changed by &gt;1V</td></tr>
+    </table>
+
+    <h3>Voltage Smoothing</h3>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Description</th></tr>
+      <tr><td><code>float[10]</code></td><td><code>voutSamples</code></td><td>Circular buffer for moving average</td></tr>
+      <tr><td><code>byte</code></td><td><code>voutSampleIdx</code></td><td>Current write position</td></tr>
+      <tr><td><code>float</code></td><td><code>smoothedVout</code></td><td>Computed average</td></tr>
+    </table>
+
+    <h3>Confirmation Window</h3>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Description</th></tr>
+      <tr><td><code>unsigned long</code></td><td><code>outOfToleranceStart</code></td><td>When Vout first left tolerance (<code>0</code> = inactive)</td></tr>
+      <tr><td><code>bool</code></td><td><code>isConfirmed</code></td><td><code>true</code> = confirmation elapsed, servo can act</td></tr>
+    </table>
+
+    <h3>UI, Buzzer &amp; LCD Throttle</h3>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Description</th></tr>
+      <tr><td><code>String</code></td><td><code>inputBuffer</code></td><td>Digits typed by user</td></tr>
+      <tr><td><code>byte</code></td><td><code>isLineFull</code></td><td>LCD line counter for auto-clear</td></tr>
+      <tr><td><code>bool</code></td><td><code>backlightOn</code></td><td>LCD backlight state</td></tr>
+      <tr><td><code>unsigned long</code></td><td><code>buzzerOnMillis</code></td><td>When buzzer was turned on</td></tr>
+      <tr><td><code>bool</code></td><td><code>buzzerActive</code></td><td>Whether buzzer is sounding</td></tr>
+      <tr><td><code>unsigned long</code></td><td><code>lastLCDTick</code></td><td>Last LCD/debug update (500ms throttle)</td></tr>
+    </table>
+  </div>
+
+  <!-- Methods -->
+  <div class="section" id="methods">
+    <h2><span class="emoji">🔧</span> Method Summary</h2>
+
+    <h3><span class="badge pub">Public</span> Methods</h3>
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>Machine(Keypad&amp;, LiquidCrystal_I2C&amp;)</code></td><td>Constructor — initializes all members</td></tr>
+      <tr><td><code>void Initialize()</code></td><td>Hardware setup, EEPROM load, sensor calibration, homing</td></tr>
+      <tr><td><code>void runState()</code></td><td>Main tick — sensors, regulation, UI (every <code>loop()</code>)</td></tr>
+      <tr><td><code>void keypadPress()</code></td><td>Read keypad, route key to handler</td></tr>
+    </table>
+
+    <h3><span class="badge priv">Private</span> Methods</h3>
+    <table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td><code>displayLCD(bool, byte, byte, String)</code></td><td>Write text with optional clear</td></tr>
+      <tr><td><code>displayLCD(byte, byte, String)</code></td><td>Write text with auto-clear</td></tr>
+      <tr><td><code>processTargetInput(char)</code></td><td>Handle input for target voltage</td></tr>
+      <tr><td><code>processToleranceInput(char)</code></td><td>Handle input for tolerance</td></tr>
+      <tr><td><code>servoStart(int)</code></td><td>Attach and write microseconds</td></tr>
+      <tr><td><code>servoStop()</code></td><td>Stop → delay 5ms → detach</td></tr>
+      <tr><td><code>homeToZero()</code></td><td>Spin CCW until POT ≤ home value (15s timeout)</td></tr>
+      <tr><td><code>regulateLoop()</code></td><td>Vout closed-loop: confirm → pulse → settle</td></tr>
+      <tr><td><code>checkAlarms()</code></td><td>Detect stall → trigger alarm</td></tr>
+      <tr><td><code>checkAlarmRecovery()</code></td><td>Auto-recover from alarm states</td></tr>
+      <tr><td><code>readCurrent()</code></td><td>ACS712 AC RMS read (~20ms blocking)</td></tr>
+      <tr><td><code>printDebug()</code></td><td>10-column fixed-width Serial output</td></tr>
+    </table>
+  </div>
+
+  <!-- Constructor -->
+  <div class="section" id="constructor">
+    <h2>Constructor <span class="badge line">Line 6–45</span></h2>
+    <p>Initializes all member variables to safe defaults. Sensor objects use the member initializer list:</p>
+    <pre><code><span class="type">vinSensor</span>(<span class="str">VIN_SENSOR_PIN</span>, <span class="str">ZMPT_FREQUENCY</span>)      <span class="comment">// A3, 60Hz</span>
+<span class="type">voutSensor</span>(<span class="str">VOUT_SENSOR_PIN</span>, <span class="str">ZMPT_FREQUENCY</span>)    <span class="comment">// A0, 60Hz</span>
+<span class="type">currentSensor</span>(<span class="str">CSM_OUT_PIN</span>, <span class="num">5.0</span>, <span class="num">1023</span>)         <span class="comment">// A1, 5V ref, 10-bit</span></code></pre>
+    <p>Key defaults: <code>targetVoltage = -1</code> (no target), <code>toleranceV = 2</code>, all sensor values = <code>0</code>.</p>
+  </div>
+
+  <!-- Initialize -->
+  <div class="section" id="initialize">
+    <h2>Initialize() <span class="badge line">Line 50–105</span></h2>
+    <p>Boot sequence executed once in <code>setup()</code>:</p>
+    <div class="flow">Power ON
+ ├─ Pin modes (buzzer = OUTPUT, POT = INPUT)
+ ├─ LCD init + backlight + "System starting!"
+ ├─ ZMPT101B sensitivity set (both sensors)
+ ├─ ACS712 sensitivity + calibrate() (auto-zero, no load)
+ ├─ Load tolerance from EEPROM byte 0
+ ├─ Load target from EEPROM byte 1
+ │   └─ If valid (0–250) → set REG_ACTIVE automatically
+ ├─ homeToZero() → servo spins CCW until POT ≤ 5
+ ├─ 1 second delay
+ └─ Show HOME screen</div>
+    <div class="callout warn">
+      <div class="label">⚠️ Important</div>
+      <code>currentSensor.calibrate()</code> must run with <strong>no load</strong> connected to get an accurate zero-point reading.
+    </div>
+  </div>
+
+  <!-- LCD Helpers -->
+  <div class="section" id="lcd-helpers">
+    <h2>LCD Helpers <span class="badge line">Line 110–128</span></h2>
+    <p><strong>Version 1:</strong> <code>displayLCD(bool clear, byte col, byte line, String text)</code></p>
+    <p>If <code>clear = true</code> → clears entire LCD, resets line counter, then prints text.</p>
+    <p><strong>Version 2:</strong> <code>displayLCD(byte col, byte line, String text)</code></p>
+    <p>Auto-clears when both lines written (<code>isLineFull ≥ 2</code>). Prevents stale text.</p>
+  </div>
+
+  <!-- Servo Control -->
+  <div class="section" id="servo">
+    <h2>Servo Control <span class="badge line">Line 133–148</span></h2>
+    <h3>servoStart(int speed)</h3>
+    <p>Attaches servo to <code>SERVO_PIN</code> if not attached, then writes microseconds.</p>
+    <table>
+      <tr><th>Value</th><th>Action</th></tr>
+      <tr><td><code>1500</code></td><td>Stop</td></tr>
+      <tr><td><code>&gt; 1500</code></td><td>Clockwise (increase voltage)</td></tr>
+      <tr><td><code>&lt; 1500</code></td><td>Counter-clockwise (decrease voltage)</td></tr>
+    </table>
+
+    <h3>servoStop()</h3>
+    <p>Writes <code>1500</code> (stop), waits 5ms, then <strong>detaches</strong> to prevent MG996R drift from unbalanced internal resistors.</p>
+  </div>
+
+  <!-- Homing -->
+  <div class="section" id="homing">
+    <h2>homeToZero() <span class="badge line">Line 153–196</span></h2>
+    <p>Moves servo to the physical 0V position on boot using POT feedback.</p>
+    <div class="flow">Read POT (A2)
+ ├─ POT ≤ 5 → "Already at 0V" → skip
+ └─ POT > 5 → LCD: "Homing to 0V..."
+     ├─ Spin CCW at 1300µs (slow)
+     ├─ Monitor POT continuously
+     ├─ POT ≤ 5 → STOP → "Homed to 0V" ✅
+     └─ 15s timeout → STOP → "Home failed!" ⚠️</div>
+    <div class="callout info">
+      <div class="label">Note</div>
+      This is the <strong>only blocking function</strong> besides <code>readCurrent()</code>. Runs once during boot.
+    </div>
+  </div>
+
+  <!-- Current Sensor -->
+  <div class="section" id="current">
+    <h2>readCurrent() <span class="badge line">Line 201–203</span></h2>
+    <p>Calls <code>currentSensor.readCurrentAC(60)</code> from the ACS712-driver library.</p>
+    <table>
+      <tr><th>Property</th><th>Value</th></tr>
+      <tr><td>Block time</td><td>~20ms (one 60Hz AC cycle)</td></tr>
+      <tr><td>Call interval</td><td>Every 500ms (time-sliced in <code>runState</code>)</td></tr>
+      <tr><td>Returns</td><td>Current in Amperes (RMS)</td></tr>
+    </table>
+  </div>
+
+  <!-- Regulation Loop -->
+  <div class="section" id="regulate">
+    <h2>regulateLoop() <span class="badge line">Line 209–286</span></h2>
+    <p>The core regulation engine. Uses a <strong>3-state FSM</strong> (pulse-and-wait):</p>
+
+    <div class="flow">                ┌──────────────────────────────────┐
+                │                                  │
+                ▼                                  │
+          ┌──────────┐                             │
+          │SERVO_IDLE│ ─error > tol for 3s─▶ ┌──────────────┐
+          └──────────┘                       │SERVO_SETTLING│
+                ▲                            └──────────────┘
+                │                               │         │
+         within tolerance                  still off?   within?
+                │                               │         │
+                │                               ▼         │
+                │                        ┌──────────────┐ │
+                └────────────────────────│SERVO_PULSING │ │
+                                         └──────────────┘ │
+                                    reset &amp; idle ◀────────┘</div>
+
+    <h3>Proportional Speed</h3>
+    <table>
+      <tr><th>Error</th><th>Speed</th><th>Servo µs</th></tr>
+      <tr><td>&gt; 30V</td><td>200 (fast)</td><td>1700 or 1300</td></tr>
+      <tr><td>10–30V</td><td>100 (medium)</td><td>1600 or 1400</td></tr>
+      <tr><td>&lt; 10V</td><td>50 (slow)</td><td>1550 or 1450</td></tr>
+    </table>
+
+    <h3>Confirmation Window</h3>
+    <p>Vout must stay <strong>continuously outside tolerance for 3 seconds</strong> before the servo acts. If Vout returns to tolerance at any point, the timer resets. This prevents hunting from noise spikes.</p>
+  </div>
+
+  <!-- Alarms -->
+  <div class="section" id="alarms">
+    <h2>Alarms &amp; Recovery <span class="badge line">Line 288–338</span></h2>
+
+    <h3>checkAlarms()</h3>
+    <p>Detects <strong>stalled</strong> conditions — servo pulsing but Vout not changing.</p>
+    <table>
+      <tr><th>Condition</th><th>Alarm</th><th>Meaning</th></tr>
+      <tr><td><code>pulseDirection == +1</code> &amp; stall</td><td><code>REG_UNDER_VOLTAGE</code></td><td>Variac maxed out, Vin too low</td></tr>
+      <tr><td><code>pulseDirection == -1</code> &amp; stall</td><td><code>REG_OVER_VOLTAGE</code></td><td>Variac at minimum, Vin too high</td></tr>
+    </table>
+    <p>Stall = Vout unchanged for <code>STALL_TIMEOUT</code> (3s) while servo is active.</p>
+
+    <h3>checkAlarmRecovery()</h3>
+    <p><strong>Under Voltage:</strong> <code>maxAchievable = Vin × (250/220)</code>. If ≥ target → recovered.</p>
+    <p><strong>Over Voltage:</strong> If <code>currentVout ≤ target + tolerance</code> → recovered.</p>
+    <p>Recovery is <strong>automatic</strong> — no user intervention needed.</p>
+  </div>
+
+  <!-- Input Processing -->
+  <div class="section" id="input">
+    <h2>Input Processing <span class="badge line">Line 344–441</span></h2>
+
+    <h3>processTargetInput(char key)</h3>
+    <table>
+      <tr><th>Key</th><th>Action</th></tr>
+      <tr><td><code>0-9</code></td><td>Append digit (max 3 digits)</td></tr>
+      <tr><td><code>*</code></td><td>Backspace — remove last digit</td></tr>
+      <tr><td><code>A</code></td><td>Confirm: validate 0–250, save EEPROM, start regulation</td></tr>
+      <tr><td><code>D</code></td><td>Cancel: clear buffer, back to CONFIGURE</td></tr>
+    </table>
+
+    <h3>processToleranceInput(char key)</h3>
+    <p>Same pattern: max 2 digits, valid range 1–99, saves to EEPROM, returns to CONFIGURE.</p>
+  </div>
+
+  <!-- Keypad Handler -->
+  <div class="section" id="keypad">
+    <h2>keypadPress() <span class="badge line">Line 446–543</span></h2>
+    <p>Routes keypad input based on current <code>uiState</code>. <code>#</code> toggles backlight globally.</p>
+
+    <h3>Navigation Tree</h3>
+    <div class="flow">HOME
+├─ A → CONFIGURE
+│       ├─ A → INPUT_TARGET
+│       │       ├─ A → Confirm → VIEW_STATUS
+│       │       └─ D → Cancel → CONFIGURE
+│       ├─ B → INPUT_TOLERANCE
+│       │       ├─ A → Confirm → CONFIGURE
+│       │       └─ D → Cancel → CONFIGURE
+│       └─ D → HOME
+└─ B → VIEW_STATUS
+        ├─ A → VIEW_INPUT
+        │       └─ D → VIEW_STATUS
+        ├─ B → VIEW_OUTPUT
+        │       └─ D → VIEW_STATUS
+        └─ D → HOME</div>
+    <p>Every keypress triggers a <strong>100ms buzzer click</strong> for tactile feedback.</p>
+  </div>
+
+  <!-- runState -->
+  <div class="section" id="runstate">
+    <h2>runState() <span class="badge line">Line 548–649</span></h2>
+    <p>Main tick function called every <code>loop()</code>. Divided into 4 sections:</p>
+
+    <h3>Section 1: Hardware Ticks</h3>
+    <p>Buzzer auto-off after 100ms.</p>
+
+    <h3>Section 2: Sensor Ticks (Non-blocking)</h3>
+    <table>
+      <tr><th>Sensor</th><th>Method</th><th>Notes</th></tr>
+      <tr><td>Vin</td><td><code>vinSensor.update()</code></td><td>Non-blocking, with ADC MUX priming</td></tr>
+      <tr><td>Vout</td><td><code>voutSensor.update()</code></td><td>Non-blocking → 10-sample moving average</td></tr>
+      <tr><td>Current</td><td><code>readCurrent()</code></td><td>Every 500ms, blocks ~20ms</td></tr>
+    </table>
+
+    <h3>Section 3: Regulation Ticks</h3>
+    <p><code>REG_ACTIVE</code> → <code>regulateLoop()</code> + <code>checkAlarms()</code></p>
+    <p>Alarm states → <code>checkAlarmRecovery()</code></p>
+
+    <h3>Section 4: UI Ticks (every 500ms)</h3>
+    <p>Serial debug via <code>printDebug()</code>, LCD updates for <code>VIEW_INPUT</code> and <code>VIEW_OUTPUT</code> only.</p>
+  </div>
+
+  <!-- Serial Debug -->
+  <div class="section" id="debug">
+    <h2>printDebug() <span class="badge line">Line 654–738</span></h2>
+    <p>Fixed-width columnar debug output at 115200 baud, every 500ms:</p>
+    <pre><code>Vin: 220V | Vout:  24V | V_avg:  25V | I: 300mA | POT: 342 | Tgt:  25V | Tol:+- 1V | Reg:ACTIVE  | Srv:IDLE   | Cfm:---</code></pre>
+    <table>
+      <tr><th>Column</th><th>Source</th><th>Description</th></tr>
+      <tr><td><code>Vin</code></td><td><code>currentVin</code></td><td>Generator input voltage</td></tr>
+      <tr><td><code>Vout</code></td><td><code>rawVout</code></td><td>Raw output voltage (pre-average)</td></tr>
+      <tr><td><code>V_avg</code></td><td><code>currentVout</code></td><td>Smoothed output (regulation uses this)</td></tr>
+      <tr><td><code>I</code></td><td><code>currentAmps</code></td><td>Auto-switches A/mA below 1A</td></tr>
+      <tr><td><code>POT</code></td><td><code>analogRead(A2)</code></td><td>Servo pot raw ADC</td></tr>
+      <tr><td><code>Tgt</code></td><td><code>targetVoltage</code></td><td>User target or <code>---</code></td></tr>
+      <tr><td><code>Tol</code></td><td><code>toleranceV</code></td><td>± tolerance setting</td></tr>
+      <tr><td><code>Reg</code></td><td><code>regState</code></td><td>IDLE / ACTIVE / UNDER_V / OVER_V</td></tr>
+      <tr><td><code>Srv</code></td><td><code>servoState</code></td><td>IDLE / PULSE / SETTLE</td></tr>
+      <tr><td><code>Cfm</code></td><td><code>outOfToleranceStart</code></td><td>Timer progress or <code>---</code></td></tr>
+    </table>
+    <div class="callout info">
+      <div class="label">Implementation</div>
+      Uses <code>sprintf()</code> with <code>%4d</code> for right-justified numbers. All string literals wrapped in <code>F()</code> macro to save SRAM.
+    </div>
+  </div>
+
+  <!-- Execution Flow -->
+  <div class="section" id="flow">
+    <h2><span class="emoji">🔄</span> Execution Flow</h2>
+
+    <h3>Every loop() Iteration (~1ms)</h3>
+    <div class="flow">loop()
+ ├─ keypadPress()           ← scan keypad, route to handler
+ └─ runState()
+      ├─ [1] Buzzer auto-off check
+      ├─ [2] Sensor reads
+      │     ├─ Vin  (non-blocking, ADC MUX primed)
+      │     ├─ Vout (non-blocking + 10-sample moving average)
+      │     └─ Current (every 500ms, blocks 20ms)
+      ├─ [3] Regulation
+      │     ├─ REG_ACTIVE → regulateLoop() + checkAlarms()
+      │     └─ ALARM → checkAlarmRecovery()
+      └─ [4] UI (every 500ms)
+            ├─ printDebug() → Serial (115200 baud)
+            └─ LCD update (VIEW_INPUT or VIEW_OUTPUT only)</div>
+
+    <h3>Timing Budget</h3>
+    <table>
+      <tr><th>Task</th><th>Frequency</th><th>Duration</th></tr>
+      <tr><td>Keypad scan</td><td>Every loop</td><td>~50µs</td></tr>
+      <tr><td>ZMPT101B update (×2)</td><td>Every 250µs</td><td>~100µs</td></tr>
+      <tr><td>ACS712 read</td><td>Every 500ms</td><td>~20ms (blocking)</td></tr>
+      <tr><td>Regulation FSM</td><td>Every loop</td><td>~10µs</td></tr>
+      <tr><td>Serial debug</td><td>Every 500ms</td><td>~1ms</td></tr>
+      <tr><td>LCD update</td><td>Every 500ms</td><td>~2ms</td></tr>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align: center; padding: 2rem; color: var(--text-dim); font-size: 0.85rem;">
+    <p>Automated Voltage Regulator System — v2.0.0</p>
+    <p style="margin-top: 0.3rem;">Generated from <code>__main__/</code> source code</p>
+  </div>
+
+</body>
+</html>

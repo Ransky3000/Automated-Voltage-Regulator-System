@@ -4,11 +4,11 @@
 
 ## ⚙️ System Overview
 
-This system automatically regulates AC voltage output from a **Stavol TDGC2-2KVA Variable Autotransformer (Variac)** using a continuous rotation servo. It is designed for electrical engineering research where a generator (1V–48V) feeds the Variac, and the output must be held within a user-defined target range (e.g. 20V–24V) even as the generator's voltage drifts over time.
+This system automatically regulates AC voltage output from a **Stavol TDGC2-2KVA Variable Autotransformer (Variac)** using a continuous rotation servo. It is designed for electrical engineering research where a generator feeds the Variac, and the output must be held within a user-defined target range even as the generator's voltage drifts over time.
 
-The firmware follows a **State Machine** architecture, consistent with our previous project ([Automated Cacao Processor](Projects_we_made/Automated-Cacao-Processor/)).
+The firmware follows a **State Machine** architecture with **Vout closed-loop regulation**, using real-time ZMPT101B sensor feedback to drive servo corrections.
 
-## 🔬 The Problem: Vin Drifts, Rotary Must Compensate
+## 🔬 The Problem: Vin Drifts, Servo Must Compensate
 
 The Variac is a variable transformer — its knob position outputs a **ratio** of the input voltage, not an absolute value.
 
@@ -17,109 +17,187 @@ The Variac is a variable transformer — its knob position outputs a **ratio** o
 Vout = Vin × (Rotary / 220)
 ```
 Where:
-- **Vin** = Generator output (variable, 1V–48V)
+- **Vin** = Generator output (variable)
 - **Rotary** = Dial position on the Variac (0–250)
 - **220** = Fixed max input rating of the transformer
 - **Vout** = Regulated voltage delivered to the load
 
-**Example:** If Vin = 30V and the target Vout is 20V–24V:
-```
-Rotary_min = 20 × 220 / 30 = 146.7
-Rotary_max = 24 × 220 / 30 = 176.0
-```
-But if Vin drifts down to 23V (over time), the same target requires:
-```
-Rotary_min = 20 × 220 / 23 = 191.3
-Rotary_max = 24 × 220 / 23 = 229.6
-```
-The rotary must **move higher to compensate**. Currently, a person must watch the output and manually turn the knob. This project automates that.
+**Example:** If Vin = 220V and dial is at 25 → `Vout = 220 × (25/220) = 25V`
 
-### The Math Reality
-
-| Vin | Desired Vout | Rotary Needed | Achievable? |
-|:----|:-------------|:--------------|:------------|
-| 30V | 20–24V | 146–176 | ✅ Both achievable |
-| 20V | 20–24V | 220–264 | ⚠️ Can reach 20V (220), but NOT 24V (264) |
-| 15V | 20–24V | 293–352 | ❌ Can't reach either end |
-
-When Vin is too low, the transformer **physically cannot boost enough**. The system detects this and triggers an `UNDER_VOLTAGE_ALARM`. Similarly, if Vin is too high, it triggers an `OVER_VOLTAGE_ALARM`.
+If Vin drops to 200V, the same dial position gives only 22.7V — the system detects this and **automatically turns the knob** to compensate.
 
 ## 🏗️ System Architecture
 
-### Control Loop (Vout Closed-Loop + Physical Position Feedback)
+### Control Loop (Vout Closed-Loop)
 ```
 Every cycle:
-  1. Read Vin  (from ZMPT101B #1 on A3)
-  2. Read Vout (from ZMPT101B #2 on A0)
-  3. If Vout is outside target range:
-       → Calculate new Rotary = Vout_target × 220 / Vin
-       → Servo adjusts to that position using pulse-and-wait
-  4. If Vout is within range:
-       → Do nothing, hold position (servo detached)
+  1. Read Vin  (ZMPT101B on A3)
+  2. Read Vout (ZMPT101B on A0, 10-sample moving average)
+  3. Is |Vout - Target| > Tolerance?
+     YES → Wait 3 seconds (confirmation window)
+           → Still out? → Pulse servo proportionally
+     NO  → Hold position (servo detached)
+```
+
+### Boot Sequence
+```
+Power ON
+  ├─ Init LCD, sensors, load EEPROM settings
+  ├─ ACS712 auto-zero calibration (no load)
+  ├─ Home servo to 0V via POT feedback (A2)
+  └─ If saved target exists → auto-start regulation
 ```
 
 ### State Machine
-```cpp
-enum SystemState {
-    MENU,                // User configures target voltage via Keypad
-    REGULATING,          // Normal operation: monitoring Vin/Vout, servo adjusting
-    UNDER_VOLTAGE_ALARM, // Vin too low, Variac maxed out. Buzzer + LCD warning.
-    OVER_VOLTAGE_ALARM   // Vin too high, Variac bottomed out. Buzzer + LCD warning.
-};
+```
+UI States:           Regulator States:      Servo States:
+├─ HOME              ├─ REG_IDLE            ├─ SERVO_IDLE
+├─ CONFIGURE         ├─ REG_ACTIVE          ├─ SERVO_PULSING
+├─ INPUT_TARGET      ├─ REG_UNDER_VOLTAGE   └─ SERVO_SETTLING
+├─ INPUT_TOLERANCE   └─ REG_OVER_VOLTAGE
+├─ VIEW_STATUS
+├─ VIEW_INPUT
+└─ VIEW_OUTPUT
 ```
 
-### Alarm Behavior
-| State | Servo Action | Why |
-|:------|:-------------|:----|
-| `UNDER_VOLTAGE_ALARM` | Hold at MAX (250) | Squeeze out every possible volt |
-| `OVER_VOLTAGE_ALARM` | Hold at MIN (0) | Reduce output as much as possible |
-| `REGULATING` | Actively adjusting | Hunting for the target Vout |
+## 🎮 Keypad Legend
 
-Alarms are **self-recovering**: the system continuously monitors Vin even while in alarm, and automatically returns to `REGULATING` the moment conditions improve.
+### Physical Keypad Layout
+```
+┌─────┬─────┬─────┬─────┐
+│  1  │  2  │  3  │  A  │
+├─────┼─────┼─────┼─────┤
+│  4  │  5  │  6  │  B  │
+├─────┼─────┼─────┼─────┤
+│  7  │  8  │  9  │  C  │
+├─────┼─────┼─────┼─────┤
+│  *  │  0  │  #  │  D  │
+└─────┴─────┴─────┴─────┘
+```
+
+### Global Keys (Work from ANY screen)
+| Key | Function |
+|:----|:---------|
+| `#` | Toggle LCD backlight ON/OFF |
+
+### Per-Screen Key Functions
+
+#### HOME Screen
+```
+[A] Configure
+[B] View Status
+```
+| Key | Function |
+|:----|:---------|
+| `A` | Go to Configure menu |
+| `B` | Go to View Status menu |
+
+#### CONFIGURE Screen
+```
+[A] Set Voltage
+[B] Tolerance
+```
+| Key | Function |
+|:----|:---------|
+| `A` | Enter target voltage input |
+| `B` | Enter tolerance input |
+| `D` | Back to HOME |
+
+#### INPUT_TARGET Screen
+```
+Set target
+_                  ← blinking cursor
+```
+| Key | Function |
+|:----|:---------|
+| `0-9` | Type digits (max 3, range 0–250) |
+| `*` | Backspace (delete last digit) |
+| `A` | Confirm target → starts regulation |
+| `D` | Cancel → back to CONFIGURE |
+
+#### INPUT_TOLERANCE Screen
+```
+Set tolerance
+_                  ← blinking cursor
+```
+| Key | Function |
+|:----|:---------|
+| `0-9` | Type digits (max 2, range 1–99) |
+| `*` | Backspace (delete last digit) |
+| `A` | Confirm tolerance |
+| `D` | Cancel → back to CONFIGURE |
+
+#### VIEW_STATUS Screen
+```
+[A] Input
+[B] Output
+```
+| Key | Function |
+|:----|:---------|
+| `A` | View input voltage (Vin) |
+| `B` | View output voltage, current, power |
+| `D` | Back to HOME |
+
+#### VIEW_INPUT Screen
+```
+Voltage: <Vin>V
+```
+| Key | Function |
+|:----|:---------|
+| `D` | Back to VIEW_STATUS |
+
+#### VIEW_OUTPUT Screen
+```
+V:<Vout>V I:<A/mA>
+P:<W>W    <alarm>
+```
+| Key | Function |
+|:----|:---------|
+| `D` | Back to VIEW_STATUS |
+
+### Quick Reference Card
+```
+┌──────────────────────────────────────────────┐
+│  A = Select / Confirm    B = Select Option   │
+│  D = Back / Cancel       * = Backspace       │
+│  # = Toggle Backlight    0-9 = Type Digits   │
+│  C = (reserved)                              │
+└──────────────────────────────────────────────┘
+```
 
 ## 🎛️ Servo Mechanics (MG996R Continuous Rotation)
 
-The servo is a **modified MG996R** for continuous 360° rotation. Unlike a standard servo where you set an angle, this one controls **speed and direction**:
-- `1500µs` (90°) = **STOP**
+The servo is a **modified MG996R** for continuous 360° rotation:
+- `1500µs` = **STOP**
 - `> 1500µs` = **Clockwise** (increase Variac voltage)
 - `< 1500µs` = **Counter-clockwise** (decrease Variac voltage)
 
-### Position Feedback (Internal Potentiometer on A2)
-Since a continuous rotation servo has no built-in position awareness, the MG996R's internal potentiometer wiper has been **externalized** and wired to Arduino pin **A2**. This provides real-time physical position feedback (POT range 10–670 maps to Variac dial 0–250V).
-
 ### Pulse-and-Wait Control
-To prevent overshoot and oscillation, the servo uses a **pulse-and-wait** strategy:
 1. **PULSE** — Spin for 80ms in the required direction
 2. **SETTLE** — Stop and wait 150ms for the mechanics to settle
-3. **READ** — Check the pot value to see where we ended up
-4. **DECIDE** — If still not at target, pulse again; if at target, detach and go idle
+3. **READ** — Check Vout to see if we're within tolerance
+4. **DECIDE** — If still off, pulse again; if within tolerance, detach and idle
 
 ### Proportional Speed
-The servo speed scales based on proximity to the target:
 | Error | Speed | Behavior |
 |:------|:------|:---------|
 | > 30V | Fast (±200µs from center) | Full speed travel |
 | 10–30V | Medium (±100µs from center) | Moderate approach |
-| < 10V | Slow (±50µs from center) | Fine creep positioning |
+| < 10V | Slow (±50µs from center) | Fine positioning |
 
-### Direction-Aware Safety Limits
-Emergency stops only trigger when heading **toward** a physical limit, not away from it:
-- At POT_MIN → Only blocks Reverse (going further into the stop)
-- At POT_MAX → Only blocks Forward (going further into the stop)
+### 3-Second Confirmation Window
+Before the servo acts, Vout must stay **continuously outside tolerance for 3 seconds**. This prevents hunting caused by momentary noise or fluctuations.
 
-### Servo Detach (Drift Prevention)
-When idle, the servo PWM signal is **detached** (`myServo.detach()`) to prevent the MG996R from drifting due to unbalanced internal resistors. It re-attaches only when a correction is needed.
-
-### EEPROM 51-Point Calibration
-Because gear coupling between the servo shaft and the Variac knob introduces mechanical error, a **51-point physical calibration** (every 5V from 0–250V) is stored in EEPROM. The auto-positioning code uses **interpolation** between these calibrated points instead of a simple linear `map()`.
+### Homing on Boot
+On startup, the servo spins CCW using POT feedback (A2) until it reaches the physical 0V stop (`POT_HOME_VALUE`). This ensures a known starting position before regulation begins.
 
 ## 📌 Pin Map
 
 | Pin | Assignment |
 |:----|:-----------|
 | **A0** | ZMPT101B #2 — Output Voltage (Vout) |
-| **A1** | CSM2 — Output Current |
-| **A2** | Servo POT — Position Feedback |
+| **A1** | ACS712 20A — Output Current |
+| **A2** | Servo POT — Position Feedback (homing only) |
 | **A3** | ZMPT101B #1 — Input Voltage (Vin) |
 | **A4** | SDA (LCD I2C via PCF8574) |
 | **A5** | SCL (LCD I2C via PCF8574) |
@@ -128,15 +206,21 @@ Because gear coupling between the servo shaft and the Variac knob introduces mec
 | **D6–D9** | Keypad Rows |
 | **D10–D13** | Keypad Cols |
 
-> **Note:** CSM1 (Input Current on A2) was removed from the original schematic to free up A2 for the Servo Potentiometer feedback. Input current monitoring is not critical for the regulation loop.
+## 💾 EEPROM Map
+
+| Address | Data | Range |
+|:--------|:-----|:------|
+| Byte 0 | Tolerance (±V) | 1–99 (default 2) |
+| Byte 1 | Target voltage | 0–250 (0xFF = none) |
 
 ## 📦 Dependencies
 
 | Library | Purpose |
 |:--------|:--------|
-| **ZMPT101B_DRIVER** | Custom AC Voltage sensing (Blocking & Non-Blocking modes) |
+| **ZMPT101B_DRIVER** | Custom AC Voltage sensing (Non-Blocking, 4kHz sampling) |
+| **ACS712-driver** | Custom AC Current sensing (Blocking RMS + Non-Blocking modes) |
 | **Servo.h** | Continuous rotation servo control |
-| **EEPROM.h** | Persistent calibration storage |
+| **EEPROM.h** | Persistent target & tolerance storage |
 | **LiquidCrystal_I2C** | 16×2 LCD via I2C (PCF8574) |
 | **Keypad** | 4×4 matrix keypad input |
 
@@ -154,16 +238,11 @@ Automated-Voltage-Regulator-System/
 │   ├── Servo360_test/              ← Basic servo direction/speed tester
 │   ├── ServoPotFeedback_test/      ← Reads internal pot while spinning
 │   ├── ServoMap_test/              ← Maps POT range to Variac voltage
-│   ├── ServoCalibration_test/      ← Guided 11-point calibration wizard
+│   ├── ServoCalibration_test/      ← Guided calibration wizard
 │   └── ServoAutoPosition_test/     ← Full auto-positioning with EEPROM calibration
+├── For refences/                   ← 📚 Reference sketches
+│   └── For current sensor/         ← ACS712 examples (NonBlocking, Calibration)
 ├── docs/                           ← 📄 Documentation & simulations
-│   ├── Datasheet/                  ← Component datasheets
-│   ├── ZMPT101B_sensor_Simulation/ ← ZMPT101B Proteus simulation
-│   └── Automated-Voltage-Regulator-System_Simulation/
-│       ├── *.PDF                   ← Circuit schematics (exported)
-│       ├── Screenshots/            ← PCB layer screenshots
-│       └── Voltage Regulator Actual picture/
-├── A recap/                        ← 📸 Screenshots of early design discussions
 ├── README.md
 ├── library.properties
 └── .gitignore
@@ -171,29 +250,31 @@ Automated-Voltage-Regulator-System/
 
 ## 🚀 Getting Started
 
-1. Install the **ZMPT101B_DRIVER** library in your Arduino `libraries/` folder.
+1. Install **ZMPT101B_DRIVER** and **ACS712-driver** libraries in your Arduino `libraries/` folder.
 2. Open `__main__/__main__.ino` in Arduino IDE.
-3. Select your board (Arduino Uno) and port.
-4. Upload to the device.
+3. Select board (Arduino Uno) and port.
+4. Set Serial Monitor to **115200 baud**.
+5. Upload and monitor the serial debug output.
 
-## 🧪 Testing
+## 🖥️ Serial Debug Output
 
-| Sketch | Purpose |
-|:-------|:--------|
-| `tests/ZMPT101B_test/` | Verify voltage readings using **blocking** mode |
-| `tests/Non-blocking_test/` | Verify voltage readings using **non-blocking** mode (4kHz sampling) |
-| `tests/Servo360_test/` | Test servo direction, speed, and stop via Serial commands |
-| `tests/ServoPotFeedback_test/` | Read the MG996R internal pot (A2) while spinning |
-| `tests/ServoMap_test/` | Map POT range (0–670) to Variac voltage (0–250V) with safety limits |
-| `tests/ServoCalibration_test/` | Guided calibration wizard for POT-to-Voltage mapping |
-| `tests/ServoAutoPosition_test/` | Full auto-positioning: pulse-and-wait, EEPROM calibration, proportional speed, safety limits |
+The system prints a fixed-width debug line every 500ms at 115200 baud:
+```
+Vin: 220V | Vout:  24V | V_ave:  25V | I: 300mA | POT: 342 | Tgt:  25V | Tol:+- 1V | Reg:ACTIVE  | Srv:IDLE   | Cfm:---
+```
 
-## 🛠️ Development
-
-- Implement core regulation logic in `Machine.cpp`.
-- Define system states in the `enum SystemState` inside `Machine.h`.
-- Keep `__main__.ino` minimal — hardware wiring + `machine.runState()` calls only.
-- Create new test sketches in `tests/` to verify subsystems.
+| Column | Description |
+|:-------|:------------|
+| `Vin` | Input voltage from generator |
+| `Vout` | Raw output voltage (before averaging) |
+| `V_ave` | Smoothed output voltage (10-sample moving average) |
+| `I` | Output current (auto-switches A/mA below 1A) |
+| `POT` | Servo potentiometer raw ADC value |
+| `Tgt` | User-set target voltage |
+| `Tol` | Tolerance setting |
+| `Reg` | Regulator state (IDLE/ACTIVE/UNDER_V/OVER_V) |
+| `Srv` | Servo state (IDLE/PULSE/SETTLE) |
+| `Cfm` | Confirmation timer progress |
 
 ## 💡 Technical Specifications
 
@@ -206,4 +287,5 @@ Automated-Voltage-Regulator-System/
 | **Variac** | Stavol TDGC2-2KVA (0–250V, Single Phase, 220V/50-60Hz) |
 | **Display** | 16×2 LCD via I2C (PCF8574, address 0x27) |
 | **Input** | 4×4 Matrix Keypad |
+| **Serial** | 115200 baud (fixed-width debug output) |
 | **Architecture** | State Machine (`Machine` class) |

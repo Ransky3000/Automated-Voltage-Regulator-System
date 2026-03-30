@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Software Documentation — Automated Voltage Regulator System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fafbfc;
+      --surface: #ffffff;
+      --border: #e2e6ed;
+      --text: #1a1f36;
+      --text-secondary: #4a5068;
+      --text-dim: #6b7280;
+      --accent: #1e40af;
+      --accent-light: #dbeafe;
+      --green: #059669;
+      --green-light: #d1fae5;
+      --yellow: #d97706;
+      --yellow-light: #fef3c7;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+    }
+
+    @media print {
+      body { padding: 0; font-size: 11pt; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none; }
+      .section { box-shadow: none; border: 1px solid #ccc; }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.8;
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Cover */
+    .cover {
+      text-align: center;
+      padding: 4rem 2rem 3rem;
+      margin-bottom: 2rem;
+      border-bottom: 3px double var(--border);
+    }
+    .cover .label {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .cover h1 {
+      font-family: 'Merriweather', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+      line-height: 1.3;
+    }
+    .cover .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+    .cover .meta {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* Section */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2rem 2.2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    h2 {
+      font-family: 'Merriweather', serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--accent);
+      color: var(--accent);
+    }
+    h2 .num {
+      display: inline-block;
+      width: 2rem;
+      text-align: right;
+      margin-right: 0.5rem;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 1.5rem 0 0.7rem;
+    }
+    h3 .sub-num { color: var(--accent); margin-right: 0.3rem; }
+
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 1rem 0 0.5rem;
+    }
+
+    p { margin-bottom: 0.9rem; text-align: justify; }
+
+    /* Lists */
+    ol, ul { margin: 0.5rem 0 1rem 1.5rem; }
+    li { margin-bottom: 0.4rem; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.9rem;
+    }
+    th {
+      background: var(--accent-light);
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    td {
+      padding: 0.5rem 0.8rem;
+      border: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:nth-child(even) { background: #f8f9fb; }
+
+    /* Code */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: #f0f2f5;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      color: var(--accent);
+    }
+    pre {
+      background: #1e2030;
+      color: #e4e6ee;
+      border-radius: 6px;
+      padding: 1.2rem 1.5rem;
+      overflow-x: auto;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.82rem;
+      line-height: 1.6;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+
+    /* Caption */
+    .fig-caption {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-style: italic;
+      margin: -0.5rem 0 1.5rem;
+    }
+
+    /* Callout */
+    .note {
+      background: var(--accent-light);
+      border-left: 4px solid var(--accent);
+      padding: 0.8rem 1rem;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      border-radius: 0 4px 4px 0;
+    }
+    .note strong { color: var(--accent); }
+
+    /* Equation box */
+    .equation {
+      background: #f8f9fb;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem 1.5rem;
+      margin: 1rem 0;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      color: var(--text);
+    }
+    .equation .label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-family: 'Inter', sans-serif;
+      text-align: right;
+    }
+
+    /* Flow */
+    .flow-box {
+      background: #f8f9fb;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.2rem 1.5rem;
+      margin: 1rem 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      white-space: pre;
+      overflow-x: auto;
+      color: var(--text-secondary);
+    }
+
+    /* TOC */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 2rem;
+    }
+    .toc h2 { border-bottom-color: var(--border); color: var(--text); font-size: 1.1rem; }
+    .toc ol { margin-left: 1.2rem; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: var(--accent); text-decoration: none; font-size: 0.95rem; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 700px) {
+      body { padding: 1rem; }
+      .section { padding: 1.2rem; }
+      .cover h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover Page -->
+  <div class="cover">
+    <div class="label">Software Documentation for Research Defence</div>
+    <h1>Automated Voltage Regulator System</h1>
+    <p class="subtitle">Firmware Architecture, Algorithm Design, and Implementation Details</p>
+    <div class="meta">
+      Platform: Arduino Uno (ATmega328P) &bull; Language: Embedded C++ &bull; Version: 2.0.0<br>
+      Regulation Target: 24–25V AC &bull; Variac: Stavol TDGC2-2KVA
+    </div>
+  </div>
+
+  <!-- Table of Contents -->
+  <nav class="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+      <li><a href="#s1">Introduction and Problem Statement</a></li>
+      <li><a href="#s2">System Architecture Overview</a></li>
+      <li><a href="#s3">Software Design Pattern: State Machine</a></li>
+      <li><a href="#s4">Sensor Integration and Signal Processing</a></li>
+      <li><a href="#s5">Closed-Loop Regulation Algorithm</a></li>
+      <li><a href="#s6">Stability Mechanisms</a></li>
+      <li><a href="#s7">Alarm Detection and Self-Recovery</a></li>
+      <li><a href="#s8">Servo Motor Control Strategy</a></li>
+      <li><a href="#s9">User Interface and Menu Navigation</a></li>
+      <li><a href="#s10">Persistent Storage (EEPROM)</a></li>
+      <li><a href="#s11">Serial Debugging Interface</a></li>
+      <li><a href="#s12">Program Execution Flow</a></li>
+      <li><a href="#s13">Hardware Pin Assignment</a></li>
+      <li><a href="#s14">Software Dependencies</a></li>
+      <li><a href="#s15">Source Code File Structure</a></li>
+      <li><a href="#s16">Key Design Decisions and Rationale</a></li>
+    </ol>
+  </nav>
+
+  <!-- Section 1 -->
+  <div class="section" id="s1">
+    <h2><span class="num">1.</span> Introduction and Problem Statement</h2>
+    <p>
+      The Automated Voltage Regulator (AVR) system addresses the need to maintain a stable output voltage from a variable autotransformer (Variac) despite fluctuations in the generator's input voltage. In manual operation, a technician must continuously monitor the output and physically adjust the Variac's rotary knob to compensate for input drift — a tedious and error-prone process.
+    </p>
+    <p>
+      The relationship between input and output voltage in a Variac is governed by the transformer ratio equation:
+    </p>
+    <div class="equation">
+      V<sub>out</sub> = V<sub>in</sub> × (Dial Position / 220)
+      <div class="label">(Equation 1)</div>
+    </div>
+    <p>
+      Where <code>Dial Position</code> ranges from 0 to 250, and 220 is the rated maximum input voltage. This equation shows that for a constant output voltage, any change in V<sub>in</sub> requires a proportional inverse change in dial position. The firmware automates this compensation using a closed-loop control system with continuous servo adjustment.
+    </p>
+    <p>
+      The target application requires maintaining a stable <strong>25V output</strong> (±1V tolerance) during varying input conditions, specifically for testing voltage stability during V<sub>in</sub> movements in the 24–25V output range.
+    </p>
+  </div>
+
+  <!-- Section 2 -->
+  <div class="section" id="s2">
+    <h2><span class="num">2.</span> System Architecture Overview</h2>
+    <p>
+      The system consists of three primary subsystems that operate concurrently within a single-threaded, non-blocking event loop on the ATmega328P microcontroller:
+    </p>
+    <table>
+      <tr><th>Subsystem</th><th>Components</th><th>Function</th></tr>
+      <tr><td><strong>Sensing</strong></td><td>2× ZMPT101B (voltage), 1× ACS712 (current)</td><td>Continuous measurement of V<sub>in</sub>, V<sub>out</sub>, and I<sub>out</sub></td></tr>
+      <tr><td><strong>Actuation</strong></td><td>MG996R servo (continuous rotation)</td><td>Physical adjustment of Variac dial position</td></tr>
+      <tr><td><strong>User Interface</strong></td><td>4×4 keypad, 16×2 LCD (I2C), piezo buzzer</td><td>Configuration, monitoring, and feedback</td></tr>
+    </table>
+
+    <h3><span class="sub-num">2.1</span> Control Loop Block Diagram</h3>
+    <div class="flow-box">┌────────────┐     ┌──────────────┐     ┌────────────────┐     ┌──────────┐
+│ Generator  │────▶│  ZMPT101B    │────▶│  ATmega328P    │────▶│  MG996R  │
+│ (V_in)     │     │  Sensor #1   │     │  (Firmware)    │     │  Servo   │
+└────────────┘     │  (Pin A3)    │     │                │     └──────┬───┘
+                   └──────────────┘     │  Closed-Loop   │            │
+                                        │  Regulation    │      ┌─────▼─────┐
+┌────────────┐     ┌──────────────┐     │  Algorithm     │      │  VARIAC   │
+│  Load      │◀────│  ZMPT101B    │◀────│                │◀─────│  TDGC2    │
+│            │     │  Sensor #2   │     │  Pulse-Wait    │      │  -2KVA    │
+└────────────┘     │  (Pin A0)    │     │  FSM           │      └───────────┘
+                   └──────────────┘     └────────────────┘
+                                               │
+                   ┌──────────────┐             │
+                   │  ACS712 20A  │─────────────┘
+                   │  (Pin A1)    │  (Current feedback)
+                   └──────────────┘</div>
+    <p class="fig-caption">Figure 1: System block diagram showing sensor inputs, processing unit, and actuator output</p>
+  </div>
+
+  <!-- Section 3 -->
+  <div class="section page-break" id="s3">
+    <h2><span class="num">3.</span> Software Design Pattern: State Machine</h2>
+    <p>
+      The firmware employs a <strong>finite state machine (FSM)</strong> architecture, which is the standard design pattern for embedded systems requiring deterministic, event-driven behavior. The system maintains three independent state variables that operate in parallel:
+    </p>
+
+    <h3><span class="sub-num">3.1</span> UI State Machine</h3>
+    <p>Controls what the LCD displays and how keypad input is interpreted. There are 7 states:</p>
+    <table>
+      <tr><th>State</th><th>LCD Content</th><th>Available Keys</th></tr>
+      <tr><td><code>HOME</code></td><td>[A] Configure / [B] View Status</td><td>A, B</td></tr>
+      <tr><td><code>CONFIGURE</code></td><td>[A] Set Voltage / [B] Tolerance</td><td>A, B, D</td></tr>
+      <tr><td><code>INPUT_TARGET</code></td><td>Numeric entry with blinking cursor</td><td>0–9, *, A, D</td></tr>
+      <tr><td><code>INPUT_TOLERANCE</code></td><td>Numeric entry with blinking cursor</td><td>0–9, *, A, D</td></tr>
+      <tr><td><code>VIEW_STATUS</code></td><td>[A] Input / [B] Output</td><td>A, B, D</td></tr>
+      <tr><td><code>VIEW_INPUT</code></td><td>Live V<sub>in</sub> reading</td><td>D</td></tr>
+      <tr><td><code>VIEW_OUTPUT</code></td><td>Live V<sub>out</sub>, I, P, alarm status</td><td>D</td></tr>
+    </table>
+
+    <h3><span class="sub-num">3.2</span> Regulator State Machine</h3>
+    <p>Controls the operational mode of the voltage regulation system:</p>
+    <table>
+      <tr><th>State</th><th>Condition</th><th>Servo Behavior</th></tr>
+      <tr><td><code>REG_IDLE</code></td><td>No target voltage has been set</td><td>Servo remains detached</td></tr>
+      <tr><td><code>REG_ACTIVE</code></td><td>Target set, actively regulating</td><td>Pulse-and-wait correction loop</td></tr>
+      <tr><td><code>REG_UNDER_VOLTAGE</code></td><td>Variac maxed out, V<sub>in</sub> too low</td><td>Servo stopped, buzzer alarm</td></tr>
+      <tr><td><code>REG_OVER_VOLTAGE</code></td><td>Variac at minimum, V<sub>in</sub> too high</td><td>Servo stopped, buzzer alarm</td></tr>
+    </table>
+
+    <h3><span class="sub-num">3.3</span> Servo State Machine (Pulse-and-Wait FSM)</h3>
+    <p>Controls the micro-stepping behavior of the continuous rotation servo:</p>
+    <table>
+      <tr><th>State</th><th>Duration</th><th>Action</th></tr>
+      <tr><td><code>SERVO_IDLE</code></td><td>Indefinite</td><td>Servo detached, waiting for confirmed error</td></tr>
+      <tr><td><code>SERVO_PULSING</code></td><td>80 ms</td><td>Servo spinning at proportional speed</td></tr>
+      <tr><td><code>SERVO_SETTLING</code></td><td>150 ms</td><td>Servo stopped, waiting for mechanics to settle before re-reading sensors</td></tr>
+    </table>
+  </div>
+
+  <!-- Section 4 -->
+  <div class="section" id="s4">
+    <h2><span class="num">4.</span> Sensor Integration and Signal Processing</h2>
+
+    <h3><span class="sub-num">4.1</span> Voltage Sensing (ZMPT101B)</h3>
+    <p>
+      Two ZMPT101B voltage transformer modules are used to measure V<sub>in</sub> (pin A3) and V<sub>out</sub> (pin A0). The custom <code>ZMPT101B_DRIVER</code> library implements <strong>non-blocking RMS voltage calculation</strong> using continuous sampling:
+    </p>
+    <table>
+      <tr><th>Parameter</th><th>Value</th><th>Rationale</th></tr>
+      <tr><td>Sampling rate</td><td>4 kHz (every 250 µs)</td><td>≈66 samples per 60 Hz cycle — sufficient for accurate RMS</td></tr>
+      <tr><td>DC offset filter</td><td>Low-pass, α = 0.001</td><td>Time constant ~250 ms — tracks sensor drift without reacting to AC signal</td></tr>
+      <tr><td>RMS window</td><td>One AC period (16.6 ms at 60 Hz)</td><td>Produces one RMS value per cycle, eliminates partial-cycle errors</td></tr>
+      <tr><td>Sensitivity</td><td>500.0</td><td>Scaling factor for voltage conversion</td></tr>
+    </table>
+
+    <div class="note">
+      <strong>ADC Cross-talk Mitigation:</strong> The Arduino's ADC multiplexer shares a single sample-and-hold capacitor across all analog pins. When switching between pins rapidly, residual charge from the previous reading can contaminate the next. The firmware performs a <strong>dummy <code>analogRead()</code></strong> on each pin before the sensor's internal read to flush the capacitor.
+    </div>
+
+    <h3><span class="sub-num">4.2</span> Voltage Smoothing (Moving Average Filter)</h3>
+    <p>
+      The V<sub>out</sub> reading is passed through a <strong>10-sample circular buffer moving average filter</strong> before being used by the regulation algorithm. This eliminates high-frequency sensor noise that could trigger unnecessary servo corrections.
+    </p>
+    <div class="equation">
+      V<sub>out(averaged)</sub> = (1/N) × Σ V<sub>out(sample)</sub>[i], &nbsp; N = 10
+      <div class="label">(Equation 2)</div>
+    </div>
+    <p>
+      The raw (unfiltered) V<sub>out</sub> is retained separately for diagnostic purposes and displayed in the serial debug output as <code>Vout</code>, while the averaged value is displayed as <code>V_avg</code> and used for all regulation decisions.
+    </p>
+
+    <h3><span class="sub-num">4.3</span> Current Sensing (ACS712-20A)</h3>
+    <p>
+      Output current is measured using an ACS712-20A Hall-effect sensor via the <code>ACS712-driver</code> library. The reading uses a <strong>time-sliced blocking approach</strong>:
+    </p>
+    <table>
+      <tr><th>Parameter</th><th>Value</th><th>Rationale</th></tr>
+      <tr><td>Read method</td><td><code>readCurrentAC(60)</code></td><td>True RMS over one 60 Hz cycle</td></tr>
+      <tr><td>Block duration</td><td>~20 ms</td><td>One full AC cycle for accurate RMS</td></tr>
+      <tr><td>Read interval</td><td>Every 500 ms</td><td>Limits blocking to 4% of total execution time</td></tr>
+      <tr><td>Sensitivity</td><td>0.100 V/A</td><td>Per ACS712-20A datasheet specification</td></tr>
+    </table>
+    <p>
+      On boot, <code>calibrate()</code> is called with no load to auto-zero the sensor baseline, compensating for manufacturing variations in the Hall-effect element.
+    </p>
+
+    <h3><span class="sub-num">4.4</span> Display Units</h3>
+    <p>
+      Current values automatically switch display units based on magnitude: values ≥ 1.0 A are shown in Amperes (e.g., <code>1.50A</code>), while values below 1.0 A are converted to milliamperes (e.g., <code>300mA</code>) for improved readability. This applies to both the LCD and serial output.
+    </p>
+  </div>
+
+  <!-- Section 5 -->
+  <div class="section page-break" id="s5">
+    <h2><span class="num">5.</span> Closed-Loop Regulation Algorithm</h2>
+    <p>
+      The regulation algorithm implements a <strong>Vout closed-loop control system</strong> where the output voltage sensor provides direct feedback. Unlike open-loop approaches that calculate dial position from V<sub>in</sub>, this design directly measures and corrects V<sub>out</sub>, making it inherently robust against mechanical backlash, sensor calibration drift, and non-linear transformer behavior.
+    </p>
+
+    <h3><span class="sub-num">5.1</span> Algorithm Pseudocode</h3>
+    <pre><code>FUNCTION regulateLoop():
+    IF Vin < 5V:
+        STOP servo   // Generator is off
+        RETURN
+
+    error = targetVoltage - smoothedVout
+    absError = |error|
+
+    SWITCH servoState:
+
+        CASE SERVO_IDLE:
+            IF absError > tolerance:
+                IF confirmationTimer not started:
+                    START confirmationTimer
+                IF confirmationTimer >= 3 seconds:
+                    TRANSITION → SERVO_SETTLING
+            ELSE:
+                RESET confirmationTimer   // Back within tolerance
+
+        CASE SERVO_SETTLING:
+            STOP servo
+            WAIT 150ms
+            RE-READ error from sensors
+            IF absError <= tolerance:
+                TRANSITION → SERVO_IDLE
+            ELSE:
+                speed = proportionalSpeed(absError)
+                direction = (error > 0) ? CW : CCW
+                START servo at (1500 ± speed) µs
+                TRANSITION → SERVO_PULSING
+
+        CASE SERVO_PULSING:
+            AFTER 80ms:
+                STOP servo
+                TRANSITION → SERVO_SETTLING</code></pre>
+
+    <h3><span class="sub-num">5.2</span> Proportional Speed Control</h3>
+    <p>
+      The servo speed is scaled proportionally to the magnitude of the error, implementing a simplified proportional controller. This prevents overshoot when the error is small while allowing rapid correction for large deviations:
+    </p>
+    <table>
+      <tr><th>Error Magnitude</th><th>Speed Offset (µs)</th><th>Servo Command (µs)</th><th>Behavior</th></tr>
+      <tr><td>&gt; 30V</td><td>±200</td><td>1700 (CW) / 1300 (CCW)</td><td>Fast — large correction needed</td></tr>
+      <tr><td>10–30V</td><td>±100</td><td>1600 (CW) / 1400 (CCW)</td><td>Medium — moderate approach</td></tr>
+      <tr><td>&lt; 10V</td><td>±50</td><td>1550 (CW) / 1450 (CCW)</td><td>Slow — fine positioning near target</td></tr>
+    </table>
+
+    <h3><span class="sub-num">5.3</span> Why Closed-Loop Over Open-Loop?</h3>
+    <table>
+      <tr><th>Factor</th><th>Open-Loop (Calculate Dial Position from V<sub>in</sub>)</th><th>Closed-Loop (Measure and Correct V<sub>out</sub>)</th></tr>
+      <tr><td>Mechanical backlash</td><td>Error accumulates with each adjustment</td><td>Self-correcting — only cares about output</td></tr>
+      <tr><td>Sensor calibration</td><td>Requires accurate V<sub>in</sub> AND dial mapping</td><td>Only requires accurate V<sub>out</sub></td></tr>
+      <tr><td>Transformer non-linearity</td><td>Must model the non-linear transfer function</td><td>Implicitly handles any non-linearity</td></tr>
+      <tr><td>Gear coupling errors</td><td>Must calibrate POT-to-voltage mapping</td><td>Irrelevant — position is not used in control</td></tr>
+    </table>
+  </div>
+
+  <!-- Section 6 -->
+  <div class="section" id="s6">
+    <h2><span class="num">6.</span> Stability Mechanisms</h2>
+    <p>
+      Three mechanisms work together to prevent servo hunting (oscillation around the target) and ensure stable regulation:
+    </p>
+
+    <h3><span class="sub-num">6.1</span> Moving Average Filter (Signal Level)</h3>
+    <p>
+      Eliminates high-frequency noise from V<sub>out</sub> readings. Without this filter, individual sensor readings may fluctuate by ±5V due to electromagnetic interference and ADC quantization noise. The 10-sample average reduces this to ±1V, which is within the tolerance band.
+    </p>
+
+    <h3><span class="sub-num">6.2</span> Confirmation Window (Decision Level)</h3>
+    <p>
+      The servo does not react immediately when V<sub>out</sub> leaves the tolerance band. Instead, a <strong>3-second confirmation window</strong> requires the error to persist continuously before the servo begins correcting. This prevents the servo from reacting to:
+    </p>
+    <ul>
+      <li>Momentary V<sub>in</sub> fluctuations that self-correct</li>
+      <li>Load transients (sudden current draw changes)</li>
+      <li>Sensor noise that exceeds the filter's capability</li>
+    </ul>
+    <p>
+      If V<sub>out</sub> returns to within tolerance at any point during the 3-second window, the timer is reset and the servo remains idle.
+    </p>
+
+    <h3><span class="sub-num">6.3</span> Pulse-and-Wait (Actuation Level)</h3>
+    <p>
+      Rather than continuously spinning the servo, corrections are applied in discrete micro-steps:
+    </p>
+    <ol>
+      <li><strong>Pulse</strong> — Spin for exactly 80 ms</li>
+      <li><strong>Stop</strong> — Immediately stop the servo</li>
+      <li><strong>Wait</strong> — Allow 150 ms for the Variac's mechanical components to settle</li>
+      <li><strong>Measure</strong> — Re-read V<sub>out</sub> to determine if further correction is needed</li>
+    </ol>
+    <p>
+      This prevents overshoot by allowing the system to observe the effect of each small correction before deciding whether to continue. Each pulse moves the Variac knob by approximately 1–3V depending on speed level.
+    </p>
+
+    <div class="note">
+      <strong>Combined Effect:</strong> These three layers create a progressively filtered control pipeline: the moving average smooths sensor noise, the confirmation window ignores transient disturbances, and the pulse-and-wait strategy prevents mechanical overshoot. Together, they enable the system to maintain V<sub>out</sub> within ±1V of the target without oscillation.
+    </div>
+  </div>
+
+  <!-- Section 7 -->
+  <div class="section" id="s7">
+    <h2><span class="num">7.</span> Alarm Detection and Self-Recovery</h2>
+
+    <h3><span class="sub-num">7.1</span> Stall Detection</h3>
+    <p>
+      The system monitors whether V<sub>out</sub> is actually changing in response to servo corrections. If the servo has been actively pulsing but V<sub>out</sub> has not changed by more than 1V for 3 seconds (<code>STALL_TIMEOUT</code>), it concludes that the Variac has reached a physical limit:
+    </p>
+    <table>
+      <tr><th>Pulse Direction</th><th>Physical Meaning</th><th>Alarm State</th></tr>
+      <tr><td>Clockwise (+1)</td><td>Trying to increase V<sub>out</sub> but Variac dial is at maximum (250)</td><td><code>REG_UNDER_VOLTAGE</code></td></tr>
+      <tr><td>Counter-clockwise (-1)</td><td>Trying to decrease V<sub>out</sub> but Variac dial is at minimum (0)</td><td><code>REG_OVER_VOLTAGE</code></td></tr>
+    </table>
+
+    <h3><span class="sub-num">7.2</span> Automatic Recovery</h3>
+    <p>
+      Alarm states are <strong>self-recovering</strong>. The system continuously monitors even while in alarm, and automatically transitions back to <code>REG_ACTIVE</code> when conditions improve:
+    </p>
+    <table>
+      <tr><th>Alarm</th><th>Recovery Condition</th><th>Mathematical Basis</th></tr>
+      <tr><td><code>REG_UNDER_VOLTAGE</code></td><td>V<sub>in</sub> has increased sufficiently</td><td>V<sub>in</sub> × (250/220) ≥ targetVoltage</td></tr>
+      <tr><td><code>REG_OVER_VOLTAGE</code></td><td>V<sub>out</sub> has dropped back into range</td><td>V<sub>out</sub> ≤ targetVoltage + tolerance</td></tr>
+    </table>
+    <p>
+      No user intervention is required. This is critical for unattended operation where the generator's output may temporarily drop below usable levels and then recover.
+    </p>
+  </div>
+
+  <!-- Section 8 -->
+  <div class="section page-break" id="s8">
+    <h2><span class="num">8.</span> Servo Motor Control Strategy</h2>
+
+    <h3><span class="sub-num">8.1</span> Modified MG996R for Continuous Rotation</h3>
+    <p>
+      The standard MG996R is a 180° position servo. For this project, it has been modified for <strong>continuous 360° rotation</strong> by removing the internal position feedback mechanism. In this mode, the servo responds to PWM signals as follows:
+    </p>
+    <table>
+      <tr><th>PWM Signal (µs)</th><th>Behavior</th><th>Application</th></tr>
+      <tr><td>1500</td><td>Stop (zero speed)</td><td>Hold position</td></tr>
+      <tr><td>&gt; 1500</td><td>Clockwise rotation</td><td>Increase V<sub>out</sub></td></tr>
+      <tr><td>&lt; 1500</td><td>Counter-clockwise rotation</td><td>Decrease V<sub>out</sub></td></tr>
+    </table>
+
+    <h3><span class="sub-num">8.2</span> Servo Detachment (Drift Prevention)</h3>
+    <p>
+      When the servo is idle, the PWM signal is completely <strong>detached</strong> using <code>variacServo.detach()</code>. This is necessary because the modified MG996R exhibits slight drift when receiving a continuous 1500 µs signal due to internal resistor imbalance. Detaching eliminates the PWM output entirely, ensuring zero movement when idle.
+    </p>
+
+    <h3><span class="sub-num">8.3</span> Homing Sequence</h3>
+    <p>
+      On boot, the servo performs a homing routine by spinning counter-clockwise at a slow speed (1300 µs) while monitoring the internal potentiometer feedback (pin A2). When the POT reading drops to ≤ <code>POT_HOME_VALUE</code> (5), the servo has reached the physical 0V stop. This establishes a known starting position before regulation begins.
+    </p>
+    <p>
+      A 15-second timeout prevents indefinite spinning in case of mechanical failure or sensor malfunction.
+    </p>
+  </div>
+
+  <!-- Section 9 -->
+  <div class="section" id="s9">
+    <h2><span class="num">9.</span> User Interface and Menu Navigation</h2>
+
+    <h3><span class="sub-num">9.1</span> Keypad Layout</h3>
+    <pre><code>┌─────┬─────┬─────┬─────┐
+│  1  │  2  │  3  │  A  │  A = Select / Confirm
+├─────┼─────┼─────┼─────┤
+│  4  │  5  │  6  │  B  │  B = Secondary Select
+├─────┼─────┼─────┼─────┤
+│  7  │  8  │  9  │  C  │  C = (Reserved)
+├─────┼─────┼─────┼─────┤
+│  *  │  0  │  #  │  D  │  D = Back/Cancel, * = Backspace
+└─────┴─────┴─────┴─────┘  # = Toggle Backlight (Global)</code></pre>
+
+    <h3><span class="sub-num">9.2</span> Navigation Flow</h3>
+    <div class="flow-box">HOME ──────────────────────────────────────────
+ ├── [A] CONFIGURE
+ │     ├── [A] INPUT_TARGET ──[A]──▶ Save & Regulate
+ │     │                     ──[D]──▶ Cancel
+ │     ├── [B] INPUT_TOLERANCE ──[A]──▶ Save
+ │     │                        ──[D]──▶ Cancel
+ │     └── [D] ◀── Back to HOME
+ │
+ └── [B] VIEW_STATUS
+       ├── [A] VIEW_INPUT ──[D]──▶ Back
+       ├── [B] VIEW_OUTPUT ──[D]──▶ Back
+       └── [D] ◀── Back to HOME</div>
+
+    <h3><span class="sub-num">9.3</span> LCD Update Strategy</h3>
+    <p>
+      Static menu screens (HOME, CONFIGURE, VIEW_STATUS) are drawn once when entered and do not refresh. Live data screens (VIEW_INPUT, VIEW_OUTPUT) refresh every 500 ms using a non-blocking timer to prevent LCD flicker while keeping readings current.
+    </p>
+  </div>
+
+  <!-- Section 10 -->
+  <div class="section" id="s10">
+    <h2><span class="num">10.</span> Persistent Storage (EEPROM)</h2>
+    <p>
+      Two user configuration values are stored in the ATmega328P's built-in EEPROM, allowing them to survive power cycles:
+    </p>
+    <table>
+      <tr><th>Address</th><th>Data</th><th>Valid Range</th><th>Default</th><th>Behavior on Boot</th></tr>
+      <tr><td>Byte 0</td><td>Tolerance (±V)</td><td>1–99</td><td>2V</td><td>Loaded and applied immediately</td></tr>
+      <tr><td>Byte 1</td><td>Target voltage</td><td>0–250</td><td>None (0xFF)</td><td>If valid → auto-starts regulation</td></tr>
+    </table>
+    <p>
+      A fresh (unprogrammed) EEPROM byte reads as <code>0xFF</code> (255). The firmware uses this as a sentinel value to detect "no saved data" and applies defaults. Values are written using <code>EEPROM.write()</code> which only writes if the value has changed, extending EEPROM lifespan (rated for 100,000 write cycles per byte).
+    </p>
+    <div class="note">
+      <strong>Auto-Regulation on Boot:</strong> If a valid target voltage is found in EEPROM, the system will automatically begin regulating to that target after homing — no user interaction required. This is essential for unattended operation after power interruptions.
+    </div>
+  </div>
+
+  <!-- Section 11 -->
+  <div class="section" id="s11">
+    <h2><span class="num">11.</span> Serial Debugging Interface</h2>
+    <p>
+      The system outputs a <strong>fixed-width, 10-column diagnostic line</strong> via the UART serial port every 500 ms at 115,200 baud. This interface is designed for real-time monitoring during testing and calibration:
+    </p>
+    <pre><code>Vin: 220V | Vout:  24V | V_avg:  25V | I: 300mA | POT: 342 | Tgt:  25V | Tol:+- 1V | Reg:ACTIVE  | Srv:IDLE   | Cfm:---</code></pre>
+    <table>
+      <tr><th>Column</th><th>Variable</th><th>Description</th></tr>
+      <tr><td>Vin</td><td><code>currentVin</code></td><td>Generator input voltage (from ZMPT101B on A3)</td></tr>
+      <tr><td>Vout</td><td><code>rawVout</code></td><td>Raw output voltage before moving average filter</td></tr>
+      <tr><td>V_avg</td><td><code>currentVout</code></td><td>Smoothed output voltage (used for regulation decisions)</td></tr>
+      <tr><td>I</td><td><code>currentAmps</code></td><td>Output current (auto A/mA switching below 1A)</td></tr>
+      <tr><td>POT</td><td><code>analogRead(A2)</code></td><td>Servo potentiometer raw ADC value (0–1023)</td></tr>
+      <tr><td>Tgt</td><td><code>targetVoltage</code></td><td>User-configured target voltage</td></tr>
+      <tr><td>Tol</td><td><code>toleranceV</code></td><td>Configured tolerance band (±V)</td></tr>
+      <tr><td>Reg</td><td><code>regState</code></td><td>Regulator state: IDLE, ACTIVE, UNDER_V, OVER_V</td></tr>
+      <tr><td>Srv</td><td><code>servoState</code></td><td>Servo state: IDLE, PULSE, SETTLE</td></tr>
+      <tr><td>Cfm</td><td><code>outOfToleranceStart</code></td><td>Confirmation timer: elapsed/total or "---"</td></tr>
+    </table>
+    <p>
+      The baud rate of 115,200 was chosen specifically to ensure that the serial output (~120 characters per line) transmits within ~1 ms, preventing the UART buffer from blocking the main loop. At 9,600 baud, the same output would require ~12.5 ms, which would interfere with the 500 ms sensor timing.
+    </p>
+  </div>
+
+  <!-- Section 12 -->
+  <div class="section page-break" id="s12">
+    <h2><span class="num">12.</span> Program Execution Flow</h2>
+
+    <h3><span class="sub-num">12.1</span> Boot Sequence</h3>
+    <div class="flow-box">POWER ON
+  │
+  ├─ Serial.begin(115200)
+  ├─ Initialize()
+  │    ├─ Pin modes (buzzer, POT)
+  │    ├─ LCD init + backlight
+  │    ├─ ZMPT101B sensitivity configuration (×2)
+  │    ├─ ACS712 sensitivity + calibrate() [NO LOAD REQUIRED]
+  │    ├─ EEPROM read: tolerance (byte 0)
+  │    ├─ EEPROM read: target (byte 1)
+  │    │    └─ Valid? → REG_ACTIVE
+  │    ├─ homeToZero() → servo CCW until POT ≤ 5
+  │    └─ Display HOME screen
+  │
+  └─ Enter main loop</div>
+
+    <h3><span class="sub-num">12.2</span> Main Loop (every ~1 ms)</h3>
+    <div class="flow-box">loop() ─────────────────────────────────────────────
+  │
+  ├─ keypadPress()
+  │    ├─ '#' → toggle backlight (global)
+  │    └─ Route key based on current UIState
+  │
+  └─ runState()
+       │
+       ├─ [1] HARDWARE: Buzzer auto-off (100ms)
+       │
+       ├─ [2] SENSORS (non-blocking):
+       │    ├─ analogRead(A3)         ← ADC MUX prime
+       │    ├─ vinSensor.update()     ← Vin RMS sample
+       │    ├─ analogRead(A0)         ← ADC MUX prime
+       │    ├─ voutSensor.update()    ← Vout RMS sample
+       │    ├─ Vout → circular buffer → 10-sample average
+       │    └─ Every 500ms: readCurrent() (20ms blocking)
+       │
+       ├─ [3] REGULATION:
+       │    ├─ REG_ACTIVE → regulateLoop() + checkAlarms()
+       │    └─ ALARM state → checkAlarmRecovery()
+       │
+       └─ [4] UI (every 500ms, throttled):
+            ├─ printDebug() → Serial
+            └─ LCD refresh (VIEW_INPUT / VIEW_OUTPUT only)</div>
+
+    <h3><span class="sub-num">12.3</span> Timing Analysis</h3>
+    <p>
+      All operations are non-blocking except for the ACS712 current reading (20 ms), which occurs only once every 500 ms. The total CPU utilization per 500 ms window is approximately:
+    </p>
+    <table>
+      <tr><th>Operation</th><th>Frequency</th><th>Duration</th><th>CPU % (per 500ms)</th></tr>
+      <tr><td>Keypad scan</td><td>Every loop (~1ms)</td><td>~50 µs</td><td>5.0%</td></tr>
+      <tr><td>ZMPT101B sampling (×2)</td><td>Every 250 µs</td><td>~100 µs per sample</td><td>20.0%</td></tr>
+      <tr><td>ACS712 AC read</td><td>Every 500 ms</td><td>~20 ms</td><td>4.0%</td></tr>
+      <tr><td>Regulation FSM</td><td>Every loop</td><td>~10 µs</td><td>0.5%</td></tr>
+      <tr><td>Serial debug output</td><td>Every 500 ms</td><td>~1 ms</td><td>0.2%</td></tr>
+      <tr><td>LCD I2C update</td><td>Every 500 ms</td><td>~2 ms</td><td>0.4%</td></tr>
+      <tr><td colspan="3"><strong>Total estimated utilization</strong></td><td><strong>~30%</strong></td></tr>
+    </table>
+    <p>
+      The system operates well within the ATmega328P's processing capacity, leaving approximately 70% headroom for future features.
+    </p>
+  </div>
+
+  <!-- Section 13 -->
+  <div class="section" id="s13">
+    <h2><span class="num">13.</span> Hardware Pin Assignment</h2>
+    <table>
+      <tr><th>Pin</th><th>Type</th><th>Assignment</th><th>Notes</th></tr>
+      <tr><td>A0</td><td>Analog Input</td><td>ZMPT101B #2 (V<sub>out</sub>)</td><td>Output voltage sensor</td></tr>
+      <tr><td>A1</td><td>Analog Input</td><td>ACS712-20A (I<sub>out</sub>)</td><td>Output current sensor</td></tr>
+      <tr><td>A2</td><td>Analog Input</td><td>Servo potentiometer</td><td>Used for homing only</td></tr>
+      <tr><td>A3</td><td>Analog Input</td><td>ZMPT101B #1 (V<sub>in</sub>)</td><td>Input voltage sensor</td></tr>
+      <tr><td>A4</td><td>I2C SDA</td><td>LCD (via PCF8574)</td><td>Shared I2C bus</td></tr>
+      <tr><td>A5</td><td>I2C SCL</td><td>LCD (via PCF8574)</td><td>Shared I2C bus</td></tr>
+      <tr><td>D3</td><td>PWM Output</td><td>MG996R servo</td><td>Timer2 PWM</td></tr>
+      <tr><td>D5</td><td>Digital Output</td><td>Piezo buzzer</td><td>Keypress feedback + alarms</td></tr>
+      <tr><td>D6–D9</td><td>Digital I/O</td><td>Keypad rows</td><td>4×4 matrix scanning</td></tr>
+      <tr><td>D10–D13</td><td>Digital I/O</td><td>Keypad columns</td><td>4×4 matrix scanning</td></tr>
+    </table>
+  </div>
+
+  <!-- Section 14 -->
+  <div class="section" id="s14">
+    <h2><span class="num">14.</span> Software Dependencies</h2>
+    <table>
+      <tr><th>Library</th><th>Version</th><th>Source</th><th>Purpose</th></tr>
+      <tr><td><code>ZMPT101B_DRIVER</code></td><td>Custom</td><td>Project-specific</td><td>Non-blocking AC voltage RMS measurement at 4 kHz sampling</td></tr>
+      <tr><td><code>ACS712-driver</code></td><td>Custom</td><td>Project-specific</td><td>AC current RMS measurement with auto-calibration</td></tr>
+      <tr><td><code>Servo.h</code></td><td>Built-in</td><td>Arduino Core</td><td>PWM generation for continuous rotation servo</td></tr>
+      <tr><td><code>EEPROM.h</code></td><td>Built-in</td><td>Arduino Core</td><td>Persistent configuration storage</td></tr>
+      <tr><td><code>LiquidCrystal_I2C</code></td><td>1.1.2+</td><td>Arduino Library Manager</td><td>16×2 LCD control via I2C (PCF8574)</td></tr>
+      <tr><td><code>Keypad</code></td><td>3.1.1+</td><td>Arduino Library Manager</td><td>4×4 matrix keypad scanning</td></tr>
+    </table>
+  </div>
+
+  <!-- Section 15 -->
+  <div class="section" id="s15">
+    <h2><span class="num">15.</span> Source Code File Structure</h2>
+    <table>
+      <tr><th>File</th><th>Lines</th><th>Role</th><th>Key Contents</th></tr>
+      <tr>
+        <td><code>__main__.ino</code></td>
+        <td>41</td>
+        <td>Entry point</td>
+        <td>Hardware instantiation, <code>setup()</code>, <code>loop()</code></td>
+      </tr>
+      <tr>
+        <td><code>Machine.h</code></td>
+        <td>161</td>
+        <td>Header / declarations</td>
+        <td>Constants (26), enums (3), class members (28), method signatures (16)</td>
+      </tr>
+      <tr>
+        <td><code>Machine.cpp</code></td>
+        <td>739</td>
+        <td>Implementation</td>
+        <td>Constructor, Initialize, regulation loop, alarm system, keypad handler, servo control, serial debug</td>
+      </tr>
+    </table>
+    <p>
+      <strong>Total: 941 lines</strong> of application code across 3 files, following the Arduino multi-file sketch convention where <code>.ino</code> serves as the entry point and <code>.h</code>/<code>.cpp</code> pairs encapsulate the application logic.
+    </p>
+  </div>
+
+  <!-- Section 16 -->
+  <div class="section" id="s16">
+    <h2><span class="num">16.</span> Key Design Decisions and Rationale</h2>
+    <table>
+      <tr><th>Decision</th><th>Alternatives Considered</th><th>Rationale</th></tr>
+      <tr>
+        <td>Closed-loop (V<sub>out</sub> feedback)</td>
+        <td>Open-loop (calculate dial from V<sub>in</sub>)</td>
+        <td>Self-correcting for mechanical backlash, transformer non-linearity, and calibration drift. Only requires accurate V<sub>out</sub> sensor.</td>
+      </tr>
+      <tr>
+        <td>Pulse-and-wait servo control</td>
+        <td>Continuous spinning, PID controller</td>
+        <td>Simpler to tune than PID. Mechanical Variac has significant inertia — continuous control would overshoot. Discrete steps allow observation between actions.</td>
+      </tr>
+      <tr>
+        <td>3-second confirmation window</td>
+        <td>Immediate response, hysteresis band</td>
+        <td>Prevents hunting from transient V<sub>in</sub> fluctuations. A 3-second sustained error is strong evidence of a genuine drift requiring correction.</td>
+      </tr>
+      <tr>
+        <td>Moving average filter (N=10)</td>
+        <td>Exponential filter, median filter</td>
+        <td>Simple to implement, predictable latency (~170 ms window at 60 Hz update rate), effective at removing ZMPT101B noise.</td>
+      </tr>
+      <tr>
+        <td>Non-blocking architecture</td>
+        <td>Blocking delays, RTOS</td>
+        <td>ATmega328P has no RTOS support. Non-blocking <code>millis()</code>-based timing ensures keypad, sensors, regulation, and UI all run concurrently without missing events.</td>
+      </tr>
+      <tr>
+        <td>Servo detach when idle</td>
+        <td>Continuous 1500 µs signal</td>
+        <td>Modified MG996R drifts at 1500 µs due to internal resistor imbalance. Detaching PWM eliminates drift completely.</td>
+      </tr>
+      <tr>
+        <td>EEPROM persistence</td>
+        <td>Volatile memory only</td>
+        <td>Enables auto-resume after power interruptions. Critical for unattended operation where the system must restore its target and tolerance without user input.</td>
+      </tr>
+      <tr>
+        <td>115,200 baud serial</td>
+        <td>9,600 baud (default)</td>
+        <td>Debug output (~120 chars) at 9,600 baud takes 12.5 ms — enough to disrupt 500 ms sensor timing. At 115,200 baud, the same output takes &lt;1 ms.</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>Automated Voltage Regulator System — Software Documentation v2.0.0</p>
+    <p>Prepared for Research Defence Presentation</p>
+  </div>
+
+</body>
+</html>
