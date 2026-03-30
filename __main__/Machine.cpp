@@ -199,8 +199,8 @@ void Machine::homeToZero() {
 //  Current Sensor (ACS712 20A via ACS712-driver library)
 // ═══════════════════════════════════════════════════════
 float Machine::readCurrent() {
-  // Time-sliced AC reading: blocks ~20ms but only called every 500ms
-  return currentSensor.readCurrentAC(60);
+  // Zero-crossing RMS: auto-detects AC period, blocks ~33ms for 2 cycles at 60Hz
+  return currentSensor.readCurrentAC(2);
 }
 
 // ═══════════════════════════════════════════════════════
